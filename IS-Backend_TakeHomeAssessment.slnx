@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="OrderService/OrderService.csproj" Id="35fbf346-4f0f-488c-820e-172980230ab0" />
+  <Project Path="TakeHomeAssessment_Tests/TakeHomeAssessment_Tests.csproj" />
+  <Project Path="UserService/UserService.csproj" />
+</Solution>
