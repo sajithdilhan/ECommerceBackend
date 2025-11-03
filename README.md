@@ -50,6 +50,13 @@
     - Define event models for `UserCreated` and `OrderCreated`.
     - Implement Kafka producer and consumer utilities.
 
+## Trade-offs
+
+1. Used in-memory database instead of a persistent database for simplicity and ease of setup.
+2. Kept both services in a single repository for easier review, though in real-world scenarios, they would be in separate repositories.
+3. Limited error handling and validation to essential checks to keep the implementation straightforward.
+4. Used basic logging instead of a full-fledged logging framework for simplicity.
+
 
 ## Setup Instructions
 
@@ -75,10 +82,10 @@
 
 ## Resources 
 - ChatGPT 
+- Github Copilot
 - Youtube
 
 ### AI prompts
-- Add swagger UI support for .net core web api.
-- Add API versioning in .net core web api.
+- Use EF In-Memory Database.
 
                             
