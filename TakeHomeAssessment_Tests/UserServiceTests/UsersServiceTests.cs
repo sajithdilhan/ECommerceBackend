@@ -95,4 +95,30 @@ public class UsersServiceTests
             .ReturnsAsync(createdUser);
 
     }
+
+    [Fact]
+    public async Task CreateUser_WithSameEmail_Returns_ConflictRequest()
+    {
+        // Arrange
+        var newUserRequest = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+            .ReturnsAsync(new User
+            {
+                Id = Guid.NewGuid(),
+                Name = "Existing User",
+                Email = newUserRequest.Email
+            });
+
+        var usersService = new UsersService(_userRepository.Object);
+
+        //Act & Assert
+        var ex = await Assert.ThrowsAsync<ResourceConflictException>(
+           () => usersService.CreateUserAsync(newUserRequest)
+       );
+    }
 }

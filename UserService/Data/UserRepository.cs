@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.EntityFrameworkCore;
 using Shared.Models;
 
 namespace UserService.Data
@@ -17,6 +18,12 @@ namespace UserService.Data
             _context.Users.Add(newUser);
             _context.SaveChanges();
             return Task.FromResult(newUser);
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
         }
 
         public async Task<User?> GetUserByIdAsync(Guid id)

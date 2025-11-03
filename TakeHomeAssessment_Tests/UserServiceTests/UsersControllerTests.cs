@@ -216,7 +216,7 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task CreateUser_Failure()
+    public async Task CreateUser_ReturnsError_WhenDbFail()
     {
         // Arrange
         var newUser = new UserCreationRequest
@@ -226,11 +226,35 @@ public class UsersControllerTests
         };
         _userService.Setup(s => s.CreateUserAsync(newUser)).ThrowsAsync(new Exception("Database error"));
         var controller = new UsersController(_userService.Object, _logger.Object);
+
         // Act
         var result = await controller.CreateUser(newUser);
+
         // Assert
         Assert.NotNull(result);
         var errorResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(500, errorResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateUser_ReturnsError_WhenEmailAlreadyExists()
+    {
+        // Arrange
+        var newUser = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+
+        _userService.Setup(s => s.CreateUserAsync(newUser)).ThrowsAsync(new ResourceConflictException("User with the same email address already existing"));
+        var controller = new UsersController(_userService.Object, _logger.Object);
+
+        // Act
+        var result = await controller.CreateUser(newUser);
+
+        // Assert
+        Assert.NotNull(result);
+        var errorResult = Assert.IsType<ConflictObjectResult>(result.Result);
+        Assert.Equal(409, errorResult.StatusCode);
     }
 }

@@ -13,11 +13,18 @@ public class UsersService : IUsersService
         _userRepository = userRepository;
     }
 
-    public Task<UserResponse> CreateUserAsync(UserCreationRequest newUser)
+    public async Task<UserResponse> CreateUserAsync(UserCreationRequest newUser)
     {
-       var user = newUser.MapToUser();
-         return _userRepository.CreateUserAsync(user)
-                .ContinueWith(task => UserResponse.MapUserToResponseDto(task.Result));
+        var user = newUser.MapToUser();
+
+        var exsistingUser = await _userRepository.GetUserByEmailAsync(user.Email);
+        if (exsistingUser != null)
+        {
+            throw new ResourceConflictException($"User with email {user.Email} already exists.");
+        }
+
+        return await _userRepository.CreateUserAsync(user)
+            .ContinueWith(task => UserResponse.MapUserToResponseDto(task.Result));
     }
 
     public async Task<UserResponse> GetUserByIdAsync(Guid id)

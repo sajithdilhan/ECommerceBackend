@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Shared.Exceptions;
-using Shared.Models;
 using UserService.Dtos;
 using UserService.Services;
 
@@ -54,6 +53,7 @@ public class UsersController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(UserResponse), 201)]
     [ProducesResponseType(400)]
+    [ProducesResponseType(409)]
     [ProducesResponseType(500)]
     public async Task<ActionResult<UserResponse>> CreateUser(UserCreationRequest newUser)
     {
@@ -69,6 +69,11 @@ public class UsersController : ControllerBase
             var createdUser = await _usersService.CreateUserAsync(newUser);
             return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
 
+        }
+        catch (ResourceConflictException ex)
+        {
+            _logger.LogWarning(ex, "Conflict occurred while creating user with Email: {UserEmail}", newUser.Email);
+            return Conflict("User with the same email already existing");
         }
         catch (Exception ex)
         {
