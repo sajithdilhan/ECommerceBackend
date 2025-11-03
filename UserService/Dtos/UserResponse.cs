@@ -8,7 +8,7 @@ namespace UserService.Dtos
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
 
-        public static UserResponse FromUser(User user)
+        public static UserResponse MapUserToResponseDto(User user)
         {
             return new UserResponse
             {

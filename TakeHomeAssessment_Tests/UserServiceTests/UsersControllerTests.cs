@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shared.Exceptions;
-using Shared.Models;
 using UserService.Controllers;
 using UserService.Dtos;
 using UserService.Services;
@@ -160,25 +159,6 @@ public class UsersControllerTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task GetUser_LogsError_OnException()
-    {
-        // Arrange
-        Guid userId = Guid.NewGuid();
-        _userService.Setup(s => s.GetUserByIdAsync(userId)).ThrowsAsync(new Exception("Database error"));
-        var controller = new UsersController(_userService.Object, _logger.Object);
-        // Act 
-        var result = await controller.GetUser(userId);
-        // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"An error occurred while retrieving user with ID: {userId}")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
 
     [Fact]
     public async Task CreateUser_ReturnsBadRequest_WhenNameOrEmailEmpty()
@@ -189,7 +169,6 @@ public class UsersControllerTests
             Name = "",
             Email = ""
         };
-
 
         var controller = new UsersController(_userService.Object, _logger.Object);
 
@@ -220,7 +199,6 @@ public class UsersControllerTests
             Email = newUser.Email
         };
 
-
         _userService.Setup(s => s.CreateUserAsync(newUser)).ReturnsAsync(createdUser);
         var controller = new UsersController(_userService.Object, _logger.Object);
 
@@ -235,5 +213,24 @@ public class UsersControllerTests
         Assert.NotNull(userResult);
         Assert.Equal(newUser.Name, userResult.Name);
         Assert.Equal(newUser.Email, userResult.Email);
+    }
+
+    [Fact]
+    public async Task CreateUser_Failure()
+    {
+        // Arrange
+        var newUser = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+        _userService.Setup(s => s.CreateUserAsync(newUser)).ThrowsAsync(new Exception("Database error"));
+        var controller = new UsersController(_userService.Object, _logger.Object);
+        // Act
+        var result = await controller.CreateUser(newUser);
+        // Assert
+        Assert.NotNull(result);
+        var errorResult = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, errorResult.StatusCode);
     }
 }

@@ -20,7 +20,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(User), 200)]
+    [ProducesResponseType(typeof(UserResponse), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
@@ -76,5 +76,4 @@ public class UsersController : ControllerBase
             return StatusCode(500, "An error occurred while processing your request.");
         }
     }
-
 }

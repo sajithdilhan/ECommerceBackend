@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
-using Moq;
+﻿using Moq;
 using Shared.Exceptions;
 using Shared.Models;
 using UserService.Data;
+using UserService.Dtos;
 using UserService.Services;
 
 namespace TakeHomeAssessment_Tests.UserServiceTests;
@@ -10,16 +10,14 @@ namespace TakeHomeAssessment_Tests.UserServiceTests;
 public class UsersServiceTests
 {
     private readonly Mock<IUserRepository> _userRepository;
-    private readonly Mock<ILogger<UsersService>> _logger;
 
     public UsersServiceTests()
     {
         _userRepository = new Mock<IUserRepository>();
-        _logger = new Mock<ILogger<UsersService>>();
     }
 
     [Fact]
-    public async Task UsersService_ReurnsUser_WhenUserExists()
+    public async Task GetUserByIdAsync_ReurnsUser_WhenUserExists()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -28,10 +26,11 @@ public class UsersServiceTests
             {
                 Id = userId,
                 Name = "Test User",
-                Email = ""}
+                Email = ""
+            }
             );
 
-        var usersService = new UsersService(_userRepository.Object, _logger.Object);
+        var usersService = new UsersService(_userRepository.Object);
 
         // Act
         var result = await usersService.GetUserByIdAsync(userId);
@@ -42,12 +41,12 @@ public class UsersServiceTests
     }
 
     [Fact]
-    public async Task UsersService_ThrowsNotFoundException_WhenUserDoesNotExist()
+    public async Task GetUserByIdAsync_ThrowsNotFoundException_WhenUserDoesNotExist()
     {
         // Arrange
         Guid userId = Guid.NewGuid();
         _userRepository.Setup(repo => repo.GetUserByIdAsync(userId)).ReturnsAsync((User?)null);
-        var usersService = new UsersService(_userRepository.Object, _logger.Object);
+        var usersService = new UsersService(_userRepository.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(
@@ -56,13 +55,13 @@ public class UsersServiceTests
     }
 
     [Fact]
-    public async Task UsersService_ThrowsException_WhenDb_Exception()
+    public async Task GetUserByIdAsync_ThrowsException_WhenDb_Exception()
     {
         // Arrange
         Guid userId = Guid.NewGuid();
         _userRepository.Setup(repo => repo.GetUserByIdAsync(userId)).ThrowsAsync(new Exception("Database error"));
 
-        var usersService = new UsersService(_userRepository.Object, _logger.Object);
+        var usersService = new UsersService(_userRepository.Object);
 
 
         // Act & Assert
@@ -75,4 +74,25 @@ public class UsersServiceTests
 
     }
 
+    [Fact]
+    public async Task CreateUser_Returns_CreatedUser()
+    {
+        // Arrange
+        var newUserRequest = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+
+        var createdUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = newUserRequest.Name,
+            Email = newUserRequest.Email
+        };
+
+        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
+            .ReturnsAsync(createdUser);
+
+    }
 }
