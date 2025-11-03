@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using UserService.Data;
-using UserService.Models;
+using Shared.Exceptions;
+using Shared.Models;
+using UserService.Dtos;
+using UserService.Services;
 
 namespace UserService.Controllers;
 
@@ -8,23 +10,71 @@ namespace UserService.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly UserDbContext _context;
-    public UsersController(UserDbContext userDbContext)
+    private readonly IUsersService _usersService;
+    private readonly ILogger<UsersController> _logger;
+
+    public UsersController(IUsersService usersService, ILogger<UsersController> logger)
     {
-            _context = userDbContext;
+        _usersService = usersService;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
-    public ActionResult<User> GetUser(Guid id)
+    [ProducesResponseType(typeof(User), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<UserResponse>> GetUser(Guid id)
     {
-
-        if (id == Guid.Empty)
+        try
         {
-            return BadRequest("Invalid user ID.");
-        }
-        
-        var user = _context.Users.Find(id);
+            if (id == Guid.Empty)
+            {
+                _logger.LogWarning("GetUser called with an empty GUID.");
+                return BadRequest("Invalid user ID.");
+            }
 
-        return Ok(user);
+            _logger.LogInformation("Retrieving user with ID: {UserId}", id);
+            var user = await _usersService.GetUserByIdAsync(id);
+
+            return Ok(user);
+        }
+        catch (NotFoundException)
+        {
+            _logger.LogWarning("User with ID: {UserId} not found.", id);
+            return NotFound();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while retrieving user with ID: {UserId}", id);
+            return StatusCode(500, "An error occurred while processing your request.");
+        }
     }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(UserResponse), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<UserResponse>> CreateUser(UserCreationRequest newUser)
+    {
+        try
+        {
+            if (newUser is null || string.IsNullOrWhiteSpace(newUser?.Name) || string.IsNullOrWhiteSpace(newUser?.Email))
+            {
+                _logger.LogWarning("CreateUser called with invalid data.");
+                return BadRequest("Invalid request data.");
+            }
+
+            _logger.LogInformation("Creating a new user with Name: {UserName}, Email: {UserEmail}", newUser.Name, newUser.Email);
+            var createdUser = await _usersService.CreateUserAsync(newUser);
+            return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while creating user");
+            return StatusCode(500, "An error occurred while processing your request.");
+        }
+    }
+
 }

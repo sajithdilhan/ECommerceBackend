@@ -1,12 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using UserService.Models;
+using Shared.Models;
 
 namespace UserService.Data
 {
     public class UserDbContext(DbContextOptions<UserDbContext> options) : DbContext(options)
     {
         public DbSet<User> Users { get; set; }
-
-
     }
 }

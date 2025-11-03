@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using UserService.Data;
+using UserService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,8 +12,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var databaseName = builder.Configuration.GetConnectionString("UserDatabase") ?? "UserDatabase";
-builder.Services.AddDbContext<UserService.Data.UserDbContext>(options =>
+builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseInMemoryDatabase(databaseName));
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUsersService, UsersService>();
 
 var app = builder.Build();
 

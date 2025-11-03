@@ -1,4 +1,4 @@
-﻿namespace UserService.Models
+﻿namespace Shared.Models
 {
     public class User
     {
