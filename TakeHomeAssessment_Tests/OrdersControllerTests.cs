@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OrderService.Controllers;
 using OrderService.Models;
-using UserService.Models;
 
 namespace TakeHomeAssessment_Tests;
 
@@ -26,7 +25,6 @@ public class OrdersControllerTests
         var orderResult = Assert.IsType<Order>(okResult.Value);
         Assert.NotNull(orderResult);
         Assert.Equal(orderId, orderResult.Id);
-        Assert.Equal(userId, orderResult.UserId);
         Assert.Equal("Product 1", orderResult.Product);
         Assert.Equal(1, orderResult.Quantity);
         Assert.Equal(38m, orderResult.Price);

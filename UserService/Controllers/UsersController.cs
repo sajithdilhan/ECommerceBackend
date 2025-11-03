@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using UserService.Data;
 using UserService.Models;
 
 namespace UserService.Controllers;
@@ -8,11 +8,23 @@ namespace UserService.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
+    private readonly UserDbContext _context;
+    public UsersController(UserDbContext userDbContext)
+    {
+            _context = userDbContext;
+    }
+
     [HttpGet("{id}")]
     public ActionResult<User> GetUser(Guid id)
     {
-        // For demonstration purposes, returning a dummy user
-        var user = new User { Id = id, Name = "John Doe", Email = "test@test.com" };
+
+        if (id == Guid.Empty)
+        {
+            return BadRequest("Invalid user ID.");
+        }
+        
+        var user = _context.Users.Find(id);
+
         return Ok(user);
     }
 }
