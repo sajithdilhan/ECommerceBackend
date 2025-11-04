@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Shared.Contracts;
 using Shared.Exceptions;
 using UserService.Controllers;
 using UserService.Dtos;
@@ -12,11 +13,13 @@ public class UsersControllerTests
 {
     private readonly Mock<IUsersService> _userService;
     private readonly Mock<ILogger<UsersController>> _logger;
+    private readonly Mock<IKafkaProducerWrapper> _kfkaProducer;
 
     public UsersControllerTests()
     {
         _userService = new Mock<IUsersService>();
         _logger = new Mock<ILogger<UsersController>>();
+        _kfkaProducer = new Mock<IKafkaProducerWrapper>();
     }
 
     [Fact]
@@ -28,7 +31,7 @@ public class UsersControllerTests
 
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(expectedUser);
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.GetUser(userId);
@@ -50,7 +53,7 @@ public class UsersControllerTests
         // Arrange
         Guid userId = Guid.Empty;
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.GetUser(userId);
@@ -68,7 +71,7 @@ public class UsersControllerTests
         Guid userId = Guid.NewGuid();
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ThrowsAsync(new NotFoundException());
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.GetUser(userId);
@@ -85,7 +88,7 @@ public class UsersControllerTests
         // Arrange
         Guid userId = Guid.NewGuid();
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ThrowsAsync(new Exception("Database error"));
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act 
         var result = await controller.GetUser(userId);
@@ -101,7 +104,7 @@ public class UsersControllerTests
     {
         // Arrange
         Guid userId = Guid.Empty;
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
         // Act
         var result = await controller.GetUser(userId);
         // Assert
@@ -122,7 +125,7 @@ public class UsersControllerTests
         Guid userId = Guid.NewGuid();
         var expectedUser = new UserResponse { Id = userId, Name = "John Doe", Email = "sajith@mail.com" };
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(expectedUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
         // Act
         var result = await controller.GetUser(userId);
         // Assert
@@ -141,7 +144,7 @@ public class UsersControllerTests
     {
         // Arrange
         Guid userId = Guid.NewGuid();
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ThrowsAsync(new NotFoundException());
 
@@ -170,7 +173,7 @@ public class UsersControllerTests
             Email = ""
         };
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.CreateUser(userCreationRequest);
@@ -200,7 +203,7 @@ public class UsersControllerTests
         };
 
         _userService.Setup(s => s.CreateUserAsync(newUser)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.CreateUser(newUser);
@@ -225,7 +228,7 @@ public class UsersControllerTests
             Email = "sajith@mail.com"
         };
         _userService.Setup(s => s.CreateUserAsync(newUser)).ThrowsAsync(new Exception("Database error"));
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.CreateUser(newUser);
@@ -247,7 +250,7 @@ public class UsersControllerTests
         };
 
         _userService.Setup(s => s.CreateUserAsync(newUser)).ThrowsAsync(new ResourceConflictException("User with the same email address already existing"));
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.CreateUser(newUser);

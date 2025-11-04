@@ -4,6 +4,7 @@ using Moq;
 using OrderService.Controllers;
 using OrderService.Dtos;
 using OrderService.Services;
+using Shared.Contracts;
 using Shared.Exceptions;
 
 namespace TakeHomeAssessment_Tests.OrderServiceTests;
@@ -12,10 +13,12 @@ public class OrdersControllerTests
 {
     private readonly Mock<IOrdersService> _orderService;
     private readonly Mock<ILogger<OrdersController>> _logger;
+    private readonly Mock<IKafkaProducerWrapper> _kfkaProducer;
     public OrdersControllerTests()
     {
         _orderService = new Mock<IOrdersService>();
         _logger = new Mock<ILogger<OrdersController>>();
+        _kfkaProducer = new Mock<IKafkaProducerWrapper>();
     }
 
 
@@ -29,7 +32,7 @@ public class OrdersControllerTests
 
         _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.GetOrder(orderId);
@@ -53,7 +56,7 @@ public class OrdersControllerTests
         // Arrange
         Guid orderId = Guid.Empty;
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.GetOrder(orderId);
@@ -71,7 +74,7 @@ public class OrdersControllerTests
         Guid orderId = Guid.NewGuid();
         _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ThrowsAsync(new NotFoundException());
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.GetOrder(orderId);
@@ -88,7 +91,7 @@ public class OrdersControllerTests
         // Arrange
         Guid orderId = Guid.NewGuid();
         _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ThrowsAsync(new Exception("Database error"));
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act 
         var result = await controller.GetOrder(orderId);
@@ -104,7 +107,7 @@ public class OrdersControllerTests
     {
         // Arrange
         Guid orderId = Guid.Empty;
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
         // Act
         var result = await controller.GetOrder(orderId);
         // Assert
@@ -125,7 +128,7 @@ public class OrdersControllerTests
         Guid orderId = Guid.NewGuid();
         var expectedOrder = new OrderResponse { Id = orderId, Product = "Product 1", Quantity = 1, Price = 35m, UserId = Guid.NewGuid() };
         _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
         // Act
         var result = await controller.GetOrder(orderId);
         // Assert
@@ -144,7 +147,7 @@ public class OrdersControllerTests
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ThrowsAsync(new NotFoundException());
 
@@ -176,7 +179,7 @@ public class OrdersControllerTests
             Price = 0m
         };
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.CreateOrder(orderCreationRequest);
@@ -210,7 +213,7 @@ public class OrdersControllerTests
         };
 
         _orderService.Setup(s => s.CreateOrderAsync(orderCreationRequest)).ReturnsAsync(createdOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await controller.CreateOrder(orderCreationRequest);
@@ -239,7 +242,7 @@ public class OrdersControllerTests
             UserId = Guid.NewGuid()
         };
         _orderService.Setup(s => s.CreateOrderAsync(newOrder)).ThrowsAsync(new Exception("Database error"));
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer.Object);
         // Act
         var result = await controller.CreateOrder(newOrder);
         // Assert

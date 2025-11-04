@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using UserService.Data;
+using UserService.Events;
 using UserService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,18 +19,15 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
-builder.Services.AddSingleton<KafkaProducerService>();
+builder.Services.AddHostedService<OrderConsumerService>();
+builder.Services.AddSingleton<IKafkaProducerWrapper, KafkaProducerWrapper>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
