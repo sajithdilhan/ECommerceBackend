@@ -11,11 +11,13 @@ public class UsersController : ControllerBase
 {
     private readonly IUsersService _usersService;
     private readonly ILogger<UsersController> _logger;
+    private readonly KafkaProducerService _kafka;
 
-    public UsersController(IUsersService usersService, ILogger<UsersController> logger)
+    public UsersController(IUsersService usersService, ILogger<UsersController> logger, KafkaProducerService kafka)
     {
         _usersService = usersService;
         _logger = logger;
+        _kafka = kafka;
     }
 
     [HttpGet("{id}")]
@@ -67,6 +69,7 @@ public class UsersController : ControllerBase
 
             _logger.LogInformation("Creating a new user with Name: {UserName}, Email: {UserEmail}", newUser.Name, newUser.Email);
             var createdUser = await _usersService.CreateUserAsync(newUser);
+            await _kafka.PublishUserCreatedAsync(createdUser.Id, createdUser.Name, createdUser.Email);
             return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
 
         }
