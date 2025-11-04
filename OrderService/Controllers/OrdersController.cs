@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OrderService.Dtos;
 using OrderService.Services;
+using Shared.Contracts;
 using Shared.Exceptions;
 
 namespace OrderService.Controllers;
@@ -12,10 +13,13 @@ public class OrdersController : ControllerBase
 
     private readonly IOrdersService _orderService;
     private readonly ILogger<OrdersController> _logger;
-    public OrdersController(IOrdersService orderService, ILogger<OrdersController> logger)
+    private readonly IKafkaProducerWrapper _producer;
+
+    public OrdersController(IOrdersService orderService, ILogger<OrdersController> logger, IKafkaProducerWrapper producer)
     {
         _orderService = orderService;
         _logger = logger;
+        _producer = producer;
     }
 
     [HttpGet("{id}")]
@@ -58,7 +62,7 @@ public class OrdersController : ControllerBase
     {
         try
         {
-            if (newOrder is null || string.IsNullOrWhiteSpace(newOrder?.Product) || newOrder.UserId == Guid.Empty || newOrder.Quantity == 0)
+            if (IsValidRequest(newOrder))
             {
                 _logger.LogWarning("CreateOrder called with invalid data.");
                 return BadRequest("Invalid request data.");
@@ -66,6 +70,16 @@ public class OrdersController : ControllerBase
 
             _logger.LogInformation("Creating a new order with UserId: {UserId}, Product: {Product}", newOrder.UserId, newOrder.Product);
             var createdOrder = await _orderService.CreateOrderAsync(newOrder);
+            await _producer.ProduceAsync(createdOrder.Id,
+                new OrderCreatedEvent
+                {
+                    Id = createdOrder.Id,
+                    UserId = createdOrder.UserId,
+                    Price = createdOrder.Price,
+                    Product = createdOrder.Product,
+                    Quantity = createdOrder.Quantity
+                });
+
             return CreatedAtAction(nameof(GetOrder), new { id = createdOrder.Id }, createdOrder);
 
         }
@@ -74,5 +88,10 @@ public class OrdersController : ControllerBase
             _logger.LogError(ex, "An error occurred while creating order");
             return StatusCode(500, "An error occurred while processing your request.");
         }
+    }
+
+    private static bool IsValidRequest(OrderCreationRequest newOrder)
+    {
+        return newOrder is null || string.IsNullOrWhiteSpace(newOrder?.Product) || newOrder.UserId == Guid.Empty || newOrder.Quantity == 0;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Shared.Contracts;
 using Shared.Exceptions;
 using UserService.Dtos;
 using UserService.Services;
@@ -11,13 +12,13 @@ public class UsersController : ControllerBase
 {
     private readonly IUsersService _usersService;
     private readonly ILogger<UsersController> _logger;
-    private readonly KafkaProducerService _kafka;
+    private readonly IKafkaProducerWrapper _producer;
 
-    public UsersController(IUsersService usersService, ILogger<UsersController> logger, KafkaProducerService kafka)
+    public UsersController(IUsersService usersService, ILogger<UsersController> logger, IKafkaProducerWrapper producer)
     {
         _usersService = usersService;
         _logger = logger;
-        _kafka = kafka;
+        _producer = producer;
     }
 
     [HttpGet("{id}")]
@@ -61,7 +62,7 @@ public class UsersController : ControllerBase
     {
         try
         {
-            if (newUser is null || string.IsNullOrWhiteSpace(newUser?.Name) || string.IsNullOrWhiteSpace(newUser?.Email))
+            if (IsValidRequest(newUser))
             {
                 _logger.LogWarning("CreateUser called with invalid data.");
                 return BadRequest("Invalid request data.");
@@ -69,7 +70,7 @@ public class UsersController : ControllerBase
 
             _logger.LogInformation("Creating a new user with Name: {UserName}, Email: {UserEmail}", newUser.Name, newUser.Email);
             var createdUser = await _usersService.CreateUserAsync(newUser);
-            await _kafka.PublishUserCreatedAsync(createdUser.Id, createdUser.Name, createdUser.Email);
+            await _producer.ProduceAsync(createdUser.Id, new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name });
             return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
 
         }
@@ -83,5 +84,10 @@ public class UsersController : ControllerBase
             _logger.LogError(ex, "An error occurred while creating user");
             return StatusCode(500, "An error occurred while processing your request.");
         }
+    }
+
+    private static bool IsValidRequest(UserCreationRequest newUser)
+    {
+        return newUser is null || string.IsNullOrWhiteSpace(newUser?.Name) || string.IsNullOrWhiteSpace(newUser?.Email);
     }
 }

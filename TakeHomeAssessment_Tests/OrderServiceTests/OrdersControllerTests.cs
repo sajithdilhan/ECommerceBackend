@@ -4,6 +4,7 @@ using Moq;
 using OrderService.Controllers;
 using OrderService.Dtos;
 using OrderService.Services;
+using Shared.Contracts;
 using Shared.Exceptions;
 
 namespace TakeHomeAssessment_Tests.OrderServiceTests;
@@ -12,10 +13,12 @@ public class OrdersControllerTests
 {
     private readonly Mock<IOrdersService> _orderService;
     private readonly Mock<ILogger<OrdersController>> _logger;
+    private readonly Mock<IKafkaProducerWrapper> _kfkaProducer;
     public OrdersControllerTests()
     {
         _orderService = new Mock<IOrdersService>();
         _logger = new Mock<ILogger<OrdersController>>();
+        _kfkaProducer = new Mock<IKafkaProducerWrapper>();
     }
 
 
@@ -29,7 +32,7 @@ public class OrdersControllerTests
 
         _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _kfkaProducer);
 
         // Act
         var result = await controller.GetOrder(orderId);

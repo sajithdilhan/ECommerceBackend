@@ -1,16 +1,25 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-public class KafkaConsumerService : BackgroundService
+namespace Shared.Contracts;
+
+public abstract class KafkaConsumerBase<TEvent> : BackgroundService
 {
-    private readonly ILogger<KafkaConsumerService> _logger;
+    private readonly ILogger _logger;
     private readonly IConfiguration _config;
 
-    public KafkaConsumerService(ILogger<KafkaConsumerService> logger, IConfiguration config)
+    protected KafkaConsumerBase(ILogger logger, IConfiguration config)
     {
         _logger = logger;
         _config = config;
     }
+
+    protected abstract string Topic { get; }
+
+    protected abstract Task HandleMessageAsync(TEvent @event);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -19,23 +28,22 @@ public class KafkaConsumerService : BackgroundService
             var consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = _config["Kafka:BootstrapServers"],
-                GroupId = "order-service",
+                GroupId = _config["Kafka:GroupId"],
                 AutoOffsetReset = AutoOffsetReset.Earliest
             };
 
             using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
-            consumer.Subscribe("user-created");
+            consumer.Subscribe(Topic);
 
-            _logger.LogInformation("🟢 OrderService listening to user-created topic...");
+            _logger.LogInformation("Listening to topic {Topic}", Topic);
 
             try
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var cr = consumer.Consume(stoppingToken);
-                    var userEvent = JsonSerializer.Deserialize<UserCreatedEvent>(cr.Message.Value);
-                    _logger.LogInformation($"📩 Received UserCreated: {userEvent?.UserId}, {userEvent?.Name}");
-                    // Do something (e.g., create welcome order)
+                    var @event = JsonSerializer.Deserialize<TEvent>(cr.Message.Value);
+                    HandleMessageAsync(@event).GetAwaiter().GetResult();
                 }
             }
             catch (OperationCanceledException)
@@ -45,5 +53,3 @@ public class KafkaConsumerService : BackgroundService
         }, stoppingToken);
     }
 }
-
-public record UserCreatedEvent(Guid UserId, string Name, string Email);
