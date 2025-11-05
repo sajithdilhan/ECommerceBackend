@@ -13,13 +13,12 @@ public class OrdersController : ControllerBase
 
     private readonly IOrdersService _orderService;
     private readonly ILogger<OrdersController> _logger;
-    private readonly IKafkaProducerWrapper _producer;
 
-    public OrdersController(IOrdersService orderService, ILogger<OrdersController> logger, IKafkaProducerWrapper producer)
+
+    public OrdersController(IOrdersService orderService, ILogger<OrdersController> logger)
     {
         _orderService = orderService;
         _logger = logger;
-        _producer = producer;
     }
 
     [HttpGet("{id}")]
@@ -70,18 +69,14 @@ public class OrdersController : ControllerBase
 
             _logger.LogInformation("Creating a new order with UserId: {UserId}, Product: {Product}", newOrder.UserId, newOrder.Product);
             var createdOrder = await _orderService.CreateOrderAsync(newOrder);
-            await _producer.ProduceAsync(createdOrder.Id,
-                new OrderCreatedEvent
-                {
-                    Id = createdOrder.Id,
-                    UserId = createdOrder.UserId,
-                    Price = createdOrder.Price,
-                    Product = createdOrder.Product,
-                    Quantity = createdOrder.Quantity
-                });
 
             return CreatedAtAction(nameof(GetOrder), new { id = createdOrder.Id }, createdOrder);
 
+        }
+        catch (NotFoundException)
+        {
+            _logger.LogWarning("Related entity not found while creating order for UserId: {UserId}", newOrder.UserId);
+            return BadRequest($"Related entity not found.: {newOrder.UserId}");
         }
         catch (Exception ex)
         {

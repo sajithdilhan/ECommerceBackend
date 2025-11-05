@@ -10,7 +10,7 @@ public class KafkaProducerWrapper : IKafkaProducerWrapper
     private readonly IProducer<string, string> _producer;
     private readonly IConfiguration _config;
     private readonly string _producerTopic;
-    private readonly ILogger<KafkaProducerWrapper>? _logger;
+    private readonly ILogger<KafkaProducerWrapper> _logger;
 
     public KafkaProducerWrapper(IConfiguration configuration, ILogger<KafkaProducerWrapper> logger)
     {

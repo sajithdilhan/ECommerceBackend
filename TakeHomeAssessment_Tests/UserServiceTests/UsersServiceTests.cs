@@ -1,4 +1,5 @@
 ﻿using Moq;
+using Shared.Contracts;
 using Shared.Exceptions;
 using Shared.Models;
 using UserService.Data;
@@ -10,10 +11,12 @@ namespace TakeHomeAssessment_Tests.UserServiceTests;
 public class UsersServiceTests
 {
     private readonly Mock<IUserRepository> _userRepository;
+    private readonly Mock<IKafkaProducerWrapper> _kfkaProducer;
 
     public UsersServiceTests()
     {
         _userRepository = new Mock<IUserRepository>();
+        _kfkaProducer = new Mock<IKafkaProducerWrapper>();
     }
 
     [Fact]
@@ -30,7 +33,7 @@ public class UsersServiceTests
             }
             );
 
-        var usersService = new UsersService(_userRepository.Object);
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object);
 
         // Act
         var result = await usersService.GetUserByIdAsync(userId);
@@ -46,7 +49,7 @@ public class UsersServiceTests
         // Arrange
         Guid userId = Guid.NewGuid();
         _userRepository.Setup(repo => repo.GetUserByIdAsync(userId)).ReturnsAsync((User?)null);
-        var usersService = new UsersService(_userRepository.Object);
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(
@@ -61,7 +64,7 @@ public class UsersServiceTests
         Guid userId = Guid.NewGuid();
         _userRepository.Setup(repo => repo.GetUserByIdAsync(userId)).ThrowsAsync(new Exception("Database error"));
 
-        var usersService = new UsersService(_userRepository.Object);
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object);
 
 
         // Act & Assert
@@ -114,7 +117,7 @@ public class UsersServiceTests
                 Email = newUserRequest.Email
             });
 
-        var usersService = new UsersService(_userRepository.Object);
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object);
 
         //Act & Assert
         var ex = await Assert.ThrowsAsync<ResourceConflictException>(

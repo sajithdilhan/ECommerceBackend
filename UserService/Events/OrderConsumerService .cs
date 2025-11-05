@@ -14,9 +14,9 @@ public class OrderConsumerService : KafkaConsumerBase<OrderCreatedEvent>
         _config = config;
     }
 
-    protected override string Topic => _config["Kafka:ConsumerTopic"] ?? string.Empty;
+    public override string Topic => _config["Kafka:ConsumerTopic"] ?? string.Empty;
 
-    protected override Task HandleMessageAsync(OrderCreatedEvent @event)
+    public override Task HandleMessageAsync(OrderCreatedEvent @event)
     {
         _logger.LogInformation("Processed OrderCreated: {OrderId}, {Product}", @event.Id, @event.Product);
         return Task.CompletedTask;

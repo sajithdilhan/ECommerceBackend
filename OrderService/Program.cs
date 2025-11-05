@@ -17,10 +17,11 @@ var databaseName = builder.Configuration.GetConnectionString("OrderDatabase") ??
 builder.Services.AddDbContext<OrderDbContext>(options =>
     options.UseInMemoryDatabase(databaseName));
 
+builder.Services.AddSingleton<IKafkaProducerWrapper, KafkaProducerWrapper>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrdersService, OrdersService>();
 builder.Services.AddHostedService<UserConsumerService>();
-builder.Services.AddSingleton<IKafkaProducerWrapper, KafkaProducerWrapper>();
+
 
 var app = builder.Build();
 

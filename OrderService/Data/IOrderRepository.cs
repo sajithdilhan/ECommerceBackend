@@ -6,5 +6,7 @@ namespace OrderService.Data
     {
         Task<Order?> GetOrderByIdAsync(Guid id);
         Task<Order> CreateOrderAsync(Order newOrder);
+        Task<KnownUser> CreateKnownUserAsync(KnownUser knownUser);
+        Task<KnownUser?> GetKnownUserByIdAsync(Guid id);
     }
 }

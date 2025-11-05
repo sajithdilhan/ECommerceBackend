@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Shared.Contracts;
 using Shared.Exceptions;
 using UserService.Dtos;
 using UserService.Services;
@@ -12,13 +11,12 @@ public class UsersController : ControllerBase
 {
     private readonly IUsersService _usersService;
     private readonly ILogger<UsersController> _logger;
-    private readonly IKafkaProducerWrapper _producer;
 
-    public UsersController(IUsersService usersService, ILogger<UsersController> logger, IKafkaProducerWrapper producer)
+
+    public UsersController(IUsersService usersService, ILogger<UsersController> logger)
     {
         _usersService = usersService;
         _logger = logger;
-        _producer = producer;
     }
 
     [HttpGet("{id}")]
@@ -70,7 +68,6 @@ public class UsersController : ControllerBase
 
             _logger.LogInformation("Creating a new user with Name: {UserName}, Email: {UserEmail}", newUser.Name, newUser.Email);
             var createdUser = await _usersService.CreateUserAsync(newUser);
-            await _producer.ProduceAsync(createdUser.Id, new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name });
             return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
 
         }

@@ -68,16 +68,23 @@
 ### Steps to Run the Application
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd IS-Backend_TakeHomeAssessment
+   git clone https://github.com/sajithdilhan/Backend_TakeHomeAssessment.git
+   cd Backend_TakeHomeAssessment
    ```
 2. Start the services using Docker Compose:
    ```bash
-    docker-compose up --build
+    docker-compose up --build -d
     ```
-3. Access the services:
-    - User Service: `http://localhost:5000`
-    - Order Service: `http://localhost:5001`
+3. Create Kafka Topics
+   ```bash
+   docker exec -it backend_takehomeassessment-kafka-1 bash
+   kafka-topics --create --topic order-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+   kafka-topics --create --topic user-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+   kafka-topics --list --bootstrap-server localhost:9092
+   ```
+4. Access the services:
+    - User Service: `http://localhost:5001` Swagger : http://localhost:5001/swagger/index.html
+    - Order Service: `http://localhost:5002` Swagger : http://localhost:5002/swagger/index.html
 
 
 ## Resources 
@@ -86,6 +93,12 @@
 - Youtube
 
 ### AI prompts
-- Use EF In-Memory Database.
+- Use EF In-Memory Database in .NET core Web API.
+- Implementation of a simple kafka producer and consumer in .NET Web API microservices. UserService and OrderService should both produce events and consume each others events.
+- Extract a producer interface common to both consumers.
+- Create a abstract base class for consumer classes with common methods.
+- my project structure is both UserService and OrderService at root level same as docker compose. Each service has their own dockerfile. but when run docker compose up -d it gives me error. service "userservice" has neither an image nor a build context specified: invalid compose project.
+- Im getting below error in my local setup. Confluent.Kafka.ConsumeException: 'Subscribed topic not available: order-created: Broker: Unknown topic or partition'
+
 
                             

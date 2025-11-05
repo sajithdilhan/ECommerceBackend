@@ -17,9 +17,9 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
         _config = config;
     }
 
-    protected abstract string Topic { get; }
+    public abstract string Topic { get; }
 
-    protected abstract Task HandleMessageAsync(T @event);
+    public abstract Task HandleMessageAsync(T @event);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
