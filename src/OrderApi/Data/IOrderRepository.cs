@@ -1,0 +1,12 @@
+﻿using Shared.Models;
+
+namespace OrderApi.Data
+{
+    public interface IOrderRepository 
+    {
+        Task<Order?> GetOrderByIdAsync(Guid id);
+        Task<Order?> CreateOrderAsync(Order newOrder);
+        Task<int> CreateKnownUserAsync(KnownUser knownUser);
+        Task<KnownUser?> GetKnownUserByIdAsync(Guid id);
+    }
+}

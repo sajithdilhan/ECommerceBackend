@@ -23,19 +23,19 @@ services:
       - zookeeper
   
 
-  user-service:
+  user-api:
     build:
       context: .
-      dockerfile: ./UserService/Dockerfile
+      dockerfile: ./src/UserApi/Dockerfile
     ports:
       - "5001:8080"
     depends_on:
       - kafka
 
-  order-service:
+  order-api:
     build:
      context: .
-     dockerfile: ./OrderService/Dockerfile
+     dockerfile: ./src/OrderApi/Dockerfile
     ports:
       - "5002:8080"
     depends_on:

@@ -56,6 +56,7 @@
 2. Kept both services in a single repository for easier review, though in real-world scenarios, they would be in separate repositories.
 3. Limited error handling and validation to essential checks to keep the implementation straightforward.
 4. Used basic logging instead of a full-fledged logging framework for simplicity.
+5. Embedded Kafka consumers within the same microservices instead of creating dedicated consumer services for simplicity, though separate services would provide better scalability and fault isolation.
 
 
 ## Setup Instructions
@@ -77,14 +78,14 @@
     ```
 3. Create Kafka Topics
    ```bash
-   docker exec -it backend_takehomeassessment-kafka-1 bash
-   kafka-topics --create --topic order-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-   kafka-topics --create --topic user-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-   kafka-topics --list --bootstrap-server localhost:9092
+   docker exec -it ecommerceservice-kafka-1 bash
+   kafka-topics --create --topic order-created --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
+   kafka-topics --create --topic user-created --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
+   exit
    ```
-4. Restart User Service and Order service
+4. Restart User Api and Order Api
     ```bash
-   docker compose up user-service order-service -d
+   docker compose up user-api order-api -d
    ```
 5. Access the services:
     - User Service: `http://localhost:5001` Swagger : http://localhost:5001/swagger/index.html

@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/Solution Items/">
-    <File Path="docker-compose.yml" />
-  </Folder>
-  <Project Path="OrderService/OrderService.csproj" Id="35fbf346-4f0f-488c-820e-172980230ab0" />
-  <Project Path="Shared/Shared.csproj" Id="5f8ecddd-801d-4a7f-8dc2-88964a66e6e1" />
-  <Project Path="TakeHomeAssessment_Tests/TakeHomeAssessment_Tests.csproj" />
-  <Project Path="UserService/UserService.csproj" />
-</Solution>
