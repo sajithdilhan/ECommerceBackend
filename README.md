@@ -80,7 +80,7 @@
    docker exec -it backend_takehomeassessment-kafka-1 bash
    kafka-topics --create --topic order-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
    kafka-topics --create --topic user-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-   kafka-topics --list --bootstrap-server localhost:9092
+   exit
    ```
 4. Restart User Service and Order service
     ```bash
