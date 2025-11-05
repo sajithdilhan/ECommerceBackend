@@ -40,7 +40,7 @@ public class OrdersServiceTests
         var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(() => orderService.CreateOrderAsync(newOrderRequest));
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => orderService.CreateOrderAsync(newOrderRequest));
         Assert.Contains($"Known user with ID {newOrderRequest.UserId} not found.", ex.Message);
     }
 

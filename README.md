@@ -69,8 +69,8 @@
 ### Steps to Run the Application
 1. Clone the repository:
    ```bash
-   git clone https://github.com/sajithdilhan/Backend_TakeHomeAssessment.git
-   cd Backend_TakeHomeAssessment
+   git clone https://github.com/sajithdilhan/ECommerceBackend.git
+   cd ECommerceBackend
    ```
 2. Start the services using Docker Compose:
    ```bash
@@ -78,14 +78,14 @@
     ```
 3. Create Kafka Topics
    ```bash
-   docker exec -it ecommerceservice-kafka-1 bash
+   docker exec -it ecommercebackend-kafka-1 bash
    kafka-topics --create --topic order-created --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
    kafka-topics --create --topic user-created --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
    exit
    ```
 4. Restart User Api and Order Api
     ```bash
-   docker compose up user-api order-api -d
+   docker compose restart user-api order-api
    ```
 5. Access the services:
     - User Service: `http://localhost:5001` Swagger : http://localhost:5001/swagger/index.html

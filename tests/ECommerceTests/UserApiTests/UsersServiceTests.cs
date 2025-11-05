@@ -81,7 +81,7 @@ public class UsersServiceTests
     }
 
     [Fact]
-    public async Task CreateUser_Returns_CreatedUser()
+    public async Task CreateUserAsync_ReturnsCreatedUser_WhenValidRequest()
     {
         // Arrange
         var newUserRequest = new UserCreationRequest
@@ -97,13 +97,26 @@ public class UsersServiceTests
             Email = newUserRequest.Email
         };
 
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+            .ReturnsAsync((User?)null);
         _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
             .ReturnsAsync(createdUser);
 
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object, _logger.Object);
+
+        // Act
+        var result = await usersService.CreateUserAsync(newUserRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(createdUser.Id, result.Id);
+        Assert.Equal(createdUser.Name, result.Name);
+        Assert.Equal(createdUser.Email, result.Email);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Once);
     }
 
     [Fact]
-    public async Task CreateUser_WithSameEmail_Returns_ConflictRequest()
+    public async Task CreateUserAsync_ThrowsResourceConflictException_WhenEmailExists()
     {
         // Arrange
         var newUserRequest = new UserCreationRequest
@@ -122,9 +135,99 @@ public class UsersServiceTests
 
         var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object, _logger.Object);
 
-        //Act & Assert
+        // Act & Assert
         var ex = await Assert.ThrowsAsync<ResourceConflictException>(
            () => usersService.CreateUserAsync(newUserRequest)
        );
+        
+        Assert.Contains("already exists", ex.Message);
+        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>()), Times.Never);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateUserAsync_ThrowsException_WhenRepositoryReturnsNull()
+    {
+        // Arrange
+        var newUserRequest = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+            .ReturnsAsync((User?)null);
+        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
+            .ReturnsAsync((User?)null);
+
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object, _logger.Object);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(
+            () => usersService.CreateUserAsync(newUserRequest)
+        );
+        
+        Assert.Equal("Failed to create user.", ex.Message);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateUserAsync_ThrowsException_WhenRepositoryThrowsException()
+    {
+        // Arrange
+        var newUserRequest = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object, _logger.Object);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(
+            () => usersService.CreateUserAsync(newUserRequest)
+        );
+        
+        Assert.Equal("Database connection failed", ex.Message);
+        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>()), Times.Never);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateUserAsync_ThrowsException_WhenKafkaProducerFails()
+    {
+        // Arrange
+        var newUserRequest = new UserCreationRequest
+        {
+            Name = "New User",
+            Email = "sajith@mail.com"
+        };
+
+        var createdUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = newUserRequest.Name,
+            Email = newUserRequest.Email
+        };
+
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+            .ReturnsAsync((User?)null);
+        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
+            .ReturnsAsync(createdUser);
+        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()))
+            .ThrowsAsync(new Exception("Kafka connection failed"));
+
+        var usersService = new UsersService(_userRepository.Object, _kfkaProducer.Object, _logger.Object);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<Exception>(
+            () => usersService.CreateUserAsync(newUserRequest)
+        );
+        
+        Assert.Equal("Kafka connection failed", ex.Message);
+        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>()), Times.Once);
     }
 }
