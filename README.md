@@ -82,7 +82,11 @@
    kafka-topics --create --topic user-created --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
    kafka-topics --list --bootstrap-server localhost:9092
    ```
-4. Access the services:
+4. Restart User Service and Order service
+    ```bash
+   docker compose up user-service order-service -d
+   ```
+5. Access the services:
     - User Service: `http://localhost:5001` Swagger : http://localhost:5001/swagger/index.html
     - Order Service: `http://localhost:5002` Swagger : http://localhost:5002/swagger/index.html
 
