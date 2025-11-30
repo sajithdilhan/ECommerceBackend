@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Shared.Exceptions;
 
@@ -44,20 +45,24 @@ public class ExceptionMiddleware
             _ => HttpStatusCode.InternalServerError
         };
 
-        context.Response.StatusCode = (int)statusCode;
-
-        var response = new
+        var message = statusCode switch
         {
-            message = statusCode switch
-            {
-                HttpStatusCode.BadRequest => "Invalid request.",
-                HttpStatusCode.NotFound => "Resource not found.",
-                HttpStatusCode.Conflict => "Resource conflict occurred.",
-                _ => "An unexpected error occurred. Please try again later."
-            },
-            statusCode = context.Response.StatusCode
+            HttpStatusCode.BadRequest => "Invalid request.",
+            HttpStatusCode.NotFound => "Resource not found.",
+            HttpStatusCode.Conflict => "Resource conflict occurred.",
+            _ => "An unexpected error occurred. Please try again later."
         };
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        var problem = new ProblemDetails
+        {
+            Title = message,
+            Status = (int)statusCode,
+            Detail = ex.Message
+        };
+
+        context.Response.StatusCode = problem.Status.Value;
+        context.Response.ContentType = "application/problem+json";
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
     }
 }

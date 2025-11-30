@@ -2,18 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Shared.Authentication;
 using Shared.Contracts;
+using Shared.Filters;
 using Shared.Middlewares;
 using UserApi.Data;
-using UserApi.Events;
 using UserApi.Services;
 using static Shared.Common.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -48,13 +44,19 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
-builder.Services.AddHostedService<OrderConsumerService>();
 builder.Services.AddSingleton<IKafkaProducerWrapper, KafkaProducerWrapper>();
 builder.Services.AddOptions<AuthenticationOptions>().Bind(builder.Configuration.GetSection(AuthenticationSectionName));
 builder.Services.AddTransient<IApiKeyValidation, ApiKeyValidation>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddHealthChecks();
+
+builder.Services.AddScoped<RequestLoggingHandler>();
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<RequestLoggingHandler>();
+});
 
 var app = builder.Build();
 
