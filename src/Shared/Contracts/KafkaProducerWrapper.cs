@@ -35,6 +35,7 @@ public class KafkaProducerWrapper : IKafkaProducerWrapper
 
         _logger.LogInformation("Producing message to topic {Topic} with key {Key} and value {Value}",
                                 _producerTopic, message.Key, message.Value);
-        await _producer.ProduceAsync(_producerTopic, message);
+        CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _producer.ProduceAsync(_producerTopic, message, cancellationToken: cts.Token);
     }
 }

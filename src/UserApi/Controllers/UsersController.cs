@@ -21,6 +21,7 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(UserResponse), 200)]
     [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<ActionResult<UserResponse>> GetUser(Guid id)
@@ -40,6 +41,7 @@ public class UsersController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(UserResponse), 201)]
     [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
     [ProducesResponseType(409)]
     [ProducesResponseType(500)]
     public async Task<ActionResult> CreateUser(UserCreationRequest newUser)

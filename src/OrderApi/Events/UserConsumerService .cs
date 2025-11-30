@@ -35,7 +35,7 @@ public class UserConsumerService : KafkaConsumerBase<UserCreatedEvent>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing UserCreatedEvent for UserId: {UserId}", eventMessage.UserId);
-
+            // implement retry logic here
         }
     }
 }

@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using Shared.Authentication;
 using Shared.Contracts;
-using Shared.Exceptions;
+using Shared.Middlewares;
 using UserApi.Data;
 using UserApi.Events;
 using UserApi.Services;
+using static Shared.Common.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +15,32 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        Description = "Enter your API Key",
+        Type = SecuritySchemeType.ApiKey,
+        Name = ApiKeyHeaderName,   // Same header you validate
+        In = ParameterLocation.Header,
+        Scheme = "ApiKeyScheme"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 var databaseName = builder.Configuration.GetConnectionString("UserDatabase") ?? "UserDatabase";
 builder.Services.AddDbContext<UserDbContext>(options =>
@@ -22,21 +50,27 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddHostedService<OrderConsumerService>();
 builder.Services.AddSingleton<IKafkaProducerWrapper, KafkaProducerWrapper>();
+builder.Services.AddOptions<AuthenticationOptions>().Bind(builder.Configuration.GetSection(AuthenticationSectionName));
+builder.Services.AddTransient<IApiKeyValidation, ApiKeyValidation>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-//app.UseHttpsRedirection();
-
-app.UseMiddleware<ExceptionMiddleware>();
+app.UseHttpsRedirection();
 
 app.MapHealthChecks("/health");
 
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseRouting();
+app.UseMiddleware<ApiKeyMiddleware>();
+
 
 app.MapControllers();
 

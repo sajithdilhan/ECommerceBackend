@@ -39,15 +39,15 @@ public class OrdersService : IOrdersService
                 throw new Exception("Order creation failed.");
             }
 
-            await _producer.ProduceAsync(createdOrder.Id,
-                    new OrderCreatedEvent
-                    {
-                        Id = createdOrder.Id,
-                        UserId = createdOrder.UserId,
-                        Price = createdOrder.Price,
-                        Product = createdOrder.Product,
-                        Quantity = createdOrder.Quantity
-                    });
+            //await _producer.ProduceAsync(createdOrder.Id,
+            //        new OrderCreatedEvent
+            //        {
+            //            Id = createdOrder.Id,
+            //            UserId = createdOrder.UserId,
+            //            Price = createdOrder.Price,
+            //            Product = createdOrder.Product,
+            //            Quantity = createdOrder.Quantity
+            //        });
 
             return OrderResponse.MapOrderToResponseDto(createdOrder);
         }
@@ -63,7 +63,7 @@ public class OrdersService : IOrdersService
         try
         {
             var response = await _orderRepository.GetOrderByIdAsync(id);
-            return response == null ? throw new NotFoundException($"Order with ID {id} not found.") 
+            return response == null ? throw new NotFoundException($"Order with ID {id} not found.")
                 : OrderResponse.MapOrderToResponseDto(response);
         }
         catch (Exception ex)
@@ -93,7 +93,15 @@ public class OrdersService : IOrdersService
 
     private async Task<bool> ValidateUser(Order order)
     {
-        var existingUser = await _orderRepository.GetKnownUserByIdAsync(order.UserId);
-        return existingUser != null;
+        //var existingUser = await _orderRepository.GetKnownUserByIdAsync(order.UserId);
+        //return existingUser != null;
+ 
+        return true;
+    }
+
+    public async Task<List<OrderResponse>> GetOrdersByUserAsync(Guid userId)
+    {
+        var orders = await _orderRepository.GetOrdersByUserAsync(userId);
+        return [.. orders.Select(o => OrderResponse.MapOrderToResponseDto(o))];
     }
 }

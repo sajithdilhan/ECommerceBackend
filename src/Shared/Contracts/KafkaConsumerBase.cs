@@ -44,6 +44,7 @@ public abstract class KafkaConsumerBase<T> : BackgroundService
                     var cr = consumer.Consume(stoppingToken);
                     var eventMessage = JsonSerializer.Deserialize<T>(cr.Message.Value);
                     await HandleMessageAsync(eventMessage);
+                    consumer.Commit(cr);
                 }
             }
             catch (OperationCanceledException)

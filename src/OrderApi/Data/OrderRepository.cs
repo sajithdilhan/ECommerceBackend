@@ -34,4 +34,19 @@ public class OrderRepository : IOrderRepository
     {
         return await _context.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
     }
+
+    public Task<List<Order>> GetOrdersByUserAsync(Guid userId)
+    {
+        return _context.Orders.AsNoTracking()
+             .Where(o => o.UserId == userId)
+             .Select(o => new Order
+             {
+                 Id = o.Id,
+                 UserId = o.UserId,
+                 Quantity = o.Quantity,
+                 Price = o.Price,
+                 Product = o.Product
+             })
+             .ToListAsync();
+    }
 }

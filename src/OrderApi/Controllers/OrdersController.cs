@@ -37,11 +37,30 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 
+    [HttpGet("by-user/{userId}")]
+    [ProducesResponseType(typeof(List<OrderResponse>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<OrderResponse>> GetOrdersByUserId(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            _logger.LogWarning("GetOrder called with an empty UserId GUID.");
+            return BadRequest("Invalid user ID.");
+        }
+
+        _logger.LogInformation("Retrieving orders by user: {UserId}", userId);
+        var order = await _orderService.GetOrdersByUserAsync(userId);
+
+        return Ok(order);
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(OrderResponse), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult> CreateOrder(OrderCreationRequest newOrder)
+    public async Task<ActionResult> CreateOrder(OrderCreationRequest? newOrder)
     {
         if (IsInValidRequest(newOrder))
         {
@@ -49,13 +68,13 @@ public class OrdersController : ControllerBase
             return BadRequest("Invalid request data.");
         }
 
-        _logger.LogInformation("Creating a new order with UserId: {UserId}, Product: {Product}", newOrder.UserId, newOrder.Product);
+        _logger.LogInformation("Creating a new order with UserId: {UserId}, Product: {Product}", newOrder!.UserId, newOrder.Product);
         var createdOrder = await _orderService.CreateOrderAsync(newOrder);
 
         return CreatedAtAction(nameof(GetOrder), new { id = createdOrder.Id }, createdOrder);
     }
 
-    private static bool IsInValidRequest(OrderCreationRequest newOrder)
+    private static bool IsInValidRequest(OrderCreationRequest? newOrder)
     {
         return newOrder is null
             || string.IsNullOrWhiteSpace(newOrder?.Product)

@@ -33,8 +33,8 @@ public class UsersService : IUsersService
 
             var createdUser = await _userRepository.CreateUserAsync(user) ?? throw new Exception("Failed to create user.");
 
-            await _producer.ProduceAsync(createdUser.Id,
-                new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name });
+            //await _producer.ProduceAsync(createdUser.Id,
+            //    new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name });
 
             return UserResponse.MapUserToResponseDto(createdUser);
         }

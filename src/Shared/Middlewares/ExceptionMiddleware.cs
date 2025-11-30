@@ -2,8 +2,9 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Shared.Exceptions;
 
-namespace Shared.Exceptions;
+namespace Shared.Middlewares;
 
 public class ExceptionMiddleware
 {
