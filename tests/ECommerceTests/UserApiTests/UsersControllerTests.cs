@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Moq;
 using UserApi.Controllers;
@@ -11,11 +12,13 @@ public class UsersControllerTests
 {
     private readonly Mock<IUsersService> _userService;
     private readonly Mock<ILogger<UsersController>> _logger;
+    private readonly Mock<IDistributedCache> _cach;
 
     public UsersControllerTests()
     {
         _userService = new Mock<IUsersService>();
         _logger = new Mock<ILogger<UsersController>>();
+        _cach = new Mock<IDistributedCache>();
     }
 
     [Fact]
@@ -27,7 +30,7 @@ public class UsersControllerTests
 
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(expectedUser);
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.GetUser(userId);
@@ -49,7 +52,7 @@ public class UsersControllerTests
         // Arrange
         Guid userId = Guid.Empty;
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.GetUser(userId);
@@ -65,7 +68,7 @@ public class UsersControllerTests
     {
         // Arrange
         Guid userId = Guid.Empty;
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
         // Act
         var result = await controller.GetUser(userId);
         // Assert
@@ -86,7 +89,7 @@ public class UsersControllerTests
         Guid userId = Guid.NewGuid();
         var expectedUser = new UserResponse { Id = userId, Name = "John Doe", Email = "sajith@mail.com" };
         _userService.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(expectedUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
         // Act
         var result = await controller.GetUser(userId);
         // Assert
@@ -110,7 +113,7 @@ public class UsersControllerTests
             Email = ""
         };
 
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userCreationRequest);
@@ -140,7 +143,7 @@ public class UsersControllerTests
         };
 
         _userService.Setup(s => s.CreateUserAsync(newUser)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(newUser);
@@ -159,7 +162,7 @@ public class UsersControllerTests
     public async Task CreateUser_ReturnsBadRequest_WhenNullRequest()
     {
         // Arrange
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(null);
@@ -178,7 +181,7 @@ public class UsersControllerTests
             Name = null,
             Email = "test@example.com"
         };
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -197,7 +200,7 @@ public class UsersControllerTests
             Name = "Test User",
             Email = null
         };
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -216,7 +219,7 @@ public class UsersControllerTests
             Name = "Test User",
             Email = "TEst Email"
         };
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -235,7 +238,7 @@ public class UsersControllerTests
             Name = "   ",
             Email = "test@example.com"
         };
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -254,7 +257,7 @@ public class UsersControllerTests
             Name = "Test User",
             Email = "   "
         };
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -275,7 +278,7 @@ public class UsersControllerTests
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
         _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         await controller.CreateUser(userRequest);
@@ -300,7 +303,7 @@ public class UsersControllerTests
             Name = "",
             Email = ""
         };
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         await controller.CreateUser(userRequest);
@@ -327,7 +330,7 @@ public class UsersControllerTests
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
         _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -348,7 +351,7 @@ public class UsersControllerTests
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
         _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         var result = await controller.CreateUser(userRequest);
@@ -369,7 +372,7 @@ public class UsersControllerTests
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
         _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object);
+        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
         await controller.CreateUser(userRequest);

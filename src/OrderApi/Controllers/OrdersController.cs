@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OrderApi.Dtos;
 using OrderApi.Services;
+using System.Text.Json;
 
 namespace OrderApi.Controllers;
 
@@ -68,8 +69,8 @@ public class OrdersController : ControllerBase
             return BadRequest("Invalid request data.");
         }
 
-        _logger.LogInformation("Creating a new order with UserId: {UserId}, Product: {Product}", newOrder!.UserId, newOrder.Product);
-        var createdOrder = await _orderService.CreateOrderAsync(newOrder);
+        _logger.LogInformation("Creating a new order: {@NewOrder}", JsonSerializer.Serialize(newOrder));
+        var createdOrder = await _orderService.CreateOrderAsync(newOrder!);
 
         return CreatedAtAction(nameof(GetOrder), new { id = createdOrder.Id }, createdOrder);
     }

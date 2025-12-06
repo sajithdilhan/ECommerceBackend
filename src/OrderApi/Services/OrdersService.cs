@@ -1,11 +1,12 @@
 ﻿using OrderApi.Data;
 using OrderApi.Dtos;
+using Shared.Contracts;
 using Shared.Exceptions;
 using Shared.Models;
 
 namespace OrderApi.Services;
 
-public class OrdersService(IOrderRepository orderRepository, ILogger<OrdersService> logger) : IOrdersService
+public class OrdersService(IOrderRepository orderRepository, ILogger<OrdersService> logger, IKafkaProducerWrapper producer) : IOrdersService
 {
     public async Task<OrderResponse> CreateOrderAsync(OrderCreationRequest newOrder)
     {
@@ -26,6 +27,16 @@ public class OrdersService(IOrderRepository orderRepository, ILogger<OrdersServi
                 logger.LogError("Failed to create order for user ID {UserId}", order.UserId);
                 throw new Exception("Order creation failed.");
             }
+
+            await producer.ProduceAsync(createdOrder.Id,
+                    new OrderCreatedEvent
+                    {
+                        Id = createdOrder.Id,
+                        UserId = createdOrder.UserId,
+                        Price = createdOrder.Price,
+                        Product = createdOrder.Product,
+                        Quantity = createdOrder.Quantity
+                    });
 
             return OrderResponse.MapOrderToResponseDto(createdOrder);
         }
@@ -78,6 +89,7 @@ public class OrdersService(IOrderRepository orderRepository, ILogger<OrdersServi
     public async Task<List<OrderResponse>> GetOrdersByUserAsync(Guid userId)
     {
         var orders = await orderRepository.GetOrdersByUserAsync(userId);
-        return [.. orders.Select(o => OrderResponse.MapOrderToResponseDto(o))];
+        return orders.Count == 0 ? throw new NotFoundException($"Order with UserId {userId} not found.") :
+         [.. orders.Select(o => OrderResponse.MapOrderToResponseDto(o))];
     }
 }

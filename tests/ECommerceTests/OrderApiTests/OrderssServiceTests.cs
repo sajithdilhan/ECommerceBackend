@@ -37,7 +37,7 @@ public class OrdersServiceTests
 
         _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(null as KnownUser);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => orderService.CreateOrderAsync(newOrderRequest));
@@ -80,7 +80,7 @@ public class OrdersServiceTests
            .Setup(p => p.ProduceAsync(orderId, It.IsAny<OrderCreatedEvent>()))
            .Returns(Task.CompletedTask);
 
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await orderService.CreateOrderAsync(newOrderRequest);
@@ -115,7 +115,7 @@ public class OrdersServiceTests
         _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>()))
             .ThrowsAsync(new Exception("Database error"));
 
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateOrderAsync(newOrderRequest));
@@ -150,7 +150,7 @@ public class OrdersServiceTests
         _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>()))
             .ThrowsAsync(new Exception("Kafka error"));
 
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateOrderAsync(newOrderRequest));
@@ -185,7 +185,7 @@ public class OrdersServiceTests
         _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>()))
             .Returns(Task.CompletedTask);
 
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await orderService.CreateOrderAsync(newOrderRequest);
@@ -226,7 +226,7 @@ public class OrdersServiceTests
         _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>()))
             .Returns(Task.CompletedTask);
 
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await orderService.CreateOrderAsync(newOrderRequest);
@@ -251,7 +251,7 @@ public class OrdersServiceTests
                 Quantity = 2
             });
 
-        var ordersService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var ordersService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await ordersService.GetOrderByIdAsync(orderId);
@@ -267,7 +267,7 @@ public class OrdersServiceTests
         // Arrange
         Guid orderId = Guid.NewGuid();
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync((Order?)null);
-        var ordersService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var ordersService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(
@@ -282,7 +282,7 @@ public class OrdersServiceTests
         Guid orderId = Guid.NewGuid();
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ThrowsAsync(new Exception("Database error"));
 
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
 
         // Act & Assert
@@ -301,7 +301,7 @@ public class OrdersServiceTests
         // Arrange
         var orderId = Guid.Empty;
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync((Order?)null);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(() => orderService.GetOrderByIdAsync(orderId));
@@ -324,7 +324,7 @@ public class OrdersServiceTests
         };
 
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await orderService.GetOrderByIdAsync(orderId);
@@ -353,7 +353,7 @@ public class OrdersServiceTests
         };
 
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await orderService.GetOrderByIdAsync(orderId);
@@ -381,7 +381,7 @@ public class OrdersServiceTests
         };
 
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         var result = await orderService.GetOrderByIdAsync(orderId);
@@ -401,7 +401,7 @@ public class OrdersServiceTests
         var orderId = Guid.NewGuid();
         var expectedOrder = new Order { Id = orderId, UserId = Guid.NewGuid(), Product = "Test", Quantity = 1, Price = 10 };
         _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         await orderService.GetOrderByIdAsync(orderId);
@@ -422,9 +422,9 @@ public class OrdersServiceTests
         _orderRepository
             .Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId))
             .ReturnsAsync(existingUser);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
         // Act
-       await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser);
 
         // Assert
         _orderRepository.Verify(repo => repo.CreateKnownUserAsync(It.IsAny<KnownUser>()), Times.Never);
@@ -445,10 +445,10 @@ public class OrdersServiceTests
         _orderRepository
             .Setup(repo => repo.CreateKnownUserAsync(knownUser))
             .ReturnsAsync(1);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-       await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser);
 
         // Assert
         _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser), Times.Once);
@@ -460,7 +460,7 @@ public class OrdersServiceTests
         // Arrange
         var knownUser = new KnownUser { UserId = Guid.Empty };
         _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(Guid.Empty)).ReturnsAsync((KnownUser?)null);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         await orderService.CreateKnownUserAsync(knownUser);
@@ -477,7 +477,7 @@ public class OrdersServiceTests
         var knownUser = new KnownUser { UserId = Guid.NewGuid() };
         _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
             .ThrowsAsync(new Exception("Database error"));
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateKnownUserAsync(knownUser));
@@ -493,7 +493,7 @@ public class OrdersServiceTests
             .ReturnsAsync((KnownUser?)null);
         _orderRepository.Setup(repo => repo.CreateKnownUserAsync(It.IsAny<KnownUser>()))
             .ThrowsAsync(new Exception("Create failed"));
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateKnownUserAsync(knownUser));
@@ -504,8 +504,8 @@ public class OrdersServiceTests
     public async Task CreateKnownUserAsync_WithCompleteUserData_CreatesUser()
     {
         // Arrange
-        var knownUser = new KnownUser 
-        { 
+        var knownUser = new KnownUser
+        {
             UserId = Guid.NewGuid(),
             Email = "test@example.com"
         };
@@ -513,13 +513,13 @@ public class OrdersServiceTests
             .ReturnsAsync((KnownUser?)null);
         _orderRepository.Setup(repo => repo.CreateKnownUserAsync(knownUser))
             .ReturnsAsync(1);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         await orderService.CreateKnownUserAsync(knownUser);
 
         // Assert
-        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(It.Is<KnownUser>(u => 
+        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(It.Is<KnownUser>(u =>
             u.UserId == knownUser.UserId && u.Email == knownUser.Email)), Times.Once);
     }
 
@@ -532,7 +532,7 @@ public class OrdersServiceTests
             .ReturnsAsync((KnownUser?)null);
         _orderRepository.Setup(repo => repo.CreateKnownUserAsync(knownUser))
             .ReturnsAsync(1);
-        var orderService = new OrdersService(_orderRepository.Object, _kfkaProducer.Object, _logger.Object);
+        var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
         await orderService.CreateKnownUserAsync(knownUser);

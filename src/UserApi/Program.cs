@@ -4,7 +4,9 @@ using Shared.Authentication;
 using Shared.Contracts;
 using Shared.Filters;
 using Shared.Middlewares;
+using StackExchange.Redis;
 using UserApi.Data;
+using UserApi.Events;
 using UserApi.Services;
 using static Shared.Common.Constants;
 
@@ -45,9 +47,16 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddSingleton<IKafkaProducerWrapper, KafkaProducerWrapper>();
+builder.Services.AddHostedService<OrderConsumerService>();
 builder.Services.AddOptions<AuthenticationOptions>().Bind(builder.Configuration.GetSection(AuthenticationSectionName));
 builder.Services.AddTransient<IApiKeyValidation, ApiKeyValidation>();
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    options.InstanceName = "UserApi_";
+});
 
 builder.Services.AddHealthChecks();
 

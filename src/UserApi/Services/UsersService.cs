@@ -1,13 +1,12 @@
-﻿using Shared.Exceptions;
+﻿using Shared.Contracts;
+using Shared.Exceptions;
 using UserApi.Data;
 using UserApi.Dtos;
 
 namespace UserApi.Services;
 
-public class UsersService(IUserRepository userRepository, ILogger<UsersService> logger) : IUsersService
+public class UsersService(IUserRepository userRepository, ILogger<UsersService> logger, IKafkaProducerWrapper producer) : IUsersService
 {
-
-
     public async Task<UserResponse> CreateUserAsync(UserCreationRequest newUser)
     {
         try
@@ -22,6 +21,9 @@ public class UsersService(IUserRepository userRepository, ILogger<UsersService> 
             }
 
             var createdUser = await userRepository.CreateUserAsync(user) ?? throw new Exception("Failed to create user.");
+
+            await producer.ProduceAsync(createdUser.Id,
+                new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name });
 
             return UserResponse.MapUserToResponseDto(createdUser);
         }
