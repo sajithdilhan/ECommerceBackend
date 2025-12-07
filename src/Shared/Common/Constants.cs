@@ -8,4 +8,9 @@ public static class Constants
 
     public const string CacheKeyUserPrefix = "User_";
     public const string CacheKeyOrderPrefix = "Order_";
+
+    public const string KafkaBootstrapServersConfigKey = "Kafka:BootstrapServers";
+    public const string KafkaConsumerGroupIdConfigKey = "Kafka:GroupId";
+    public const string KafkaConsumerTopicConfigKey = "Kafka:ConsumerTopic";
+    public const string KafkaProducerTopicConfigKey = "Kafka:ProducerTopic";
 }

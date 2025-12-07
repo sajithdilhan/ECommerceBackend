@@ -1,20 +1,13 @@
-﻿using Shared.Contracts;
+﻿using Shared.Common;
+using Shared.Contracts;
 
 namespace UserApi.Events;
 
-public class OrderConsumerService : KafkaConsumerBase<OrderCreatedEvent>
+public class OrderConsumerService(
+    ILogger<OrderConsumerService> logger,
+    IConfiguration config) : KafkaConsumerBase<OrderCreatedEvent>(logger: logger, config: config)
 {
-    private readonly ILogger<OrderConsumerService> _logger;
-    private readonly IConfiguration _config;
-
-    public OrderConsumerService(ILogger<OrderConsumerService> logger, IConfiguration config)
-        : base(logger, config)
-    {
-        _logger = logger;
-        _config = config;
-    }
-
-    public override string Topic => _config["Kafka:ConsumerTopic"] ?? string.Empty;
+    public override string Topic => config[Constants.KafkaConsumerTopicConfigKey] ?? throw new ArgumentNullException("Kafka topic missing in config");
 
     public override async Task HandleMessageAsync(OrderCreatedEvent? eventMessage)
     {
@@ -22,12 +15,12 @@ public class OrderConsumerService : KafkaConsumerBase<OrderCreatedEvent>
 
         try
         {
-            _logger.LogInformation("Processed OrderCreated: {OrderId}, {Product}", eventMessage.Id, eventMessage.Product);
+            logger.LogInformation("Processed OrderCreated: {OrderId}, {Product}", eventMessage.Id, eventMessage.Product);
             // Possible to keep records of orders associated with users in User Service database, but for simplicity, just log the event here.
         }
         catch (Exception)
         {
-            _logger.LogError("Error processing OrderCreated: {OrderId}", eventMessage.Id);
+            logger.LogError("Error processing OrderCreated: {OrderId}", eventMessage.Id);
             throw;
         }
     }

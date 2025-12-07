@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Shared.Contracts;
 using UserApi.Events;
+using Shared.Common;
 
 namespace ECommerceTests.UserApiTests;
 
@@ -13,7 +14,7 @@ public class OrderConsumerServiceTests
     {
         // Arrange
         var configMock = new Mock<IConfiguration>();
-        configMock.Setup(c => c["Kafka:ConsumerTopic"]).Returns("order-created");
+        configMock.Setup(c => c[Constants.KafkaConsumerTopicConfigKey]).Returns("order-created");
 
         var loggerMock = new Mock<ILogger<OrderConsumerService>>();
         var service = new OrderConsumerService(loggerMock.Object, configMock.Object);

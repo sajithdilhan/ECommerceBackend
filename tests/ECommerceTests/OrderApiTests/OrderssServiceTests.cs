@@ -14,6 +14,7 @@ public class OrdersServiceTests
     private readonly Mock<IOrderRepository> _orderRepository;
     private readonly Mock<IKafkaProducerWrapper> _kfkaProducer;
     private readonly Mock<ILogger<OrdersService>> _logger;
+    private CancellationToken _cancellationToken = CancellationToken.None;
 
 
     public OrdersServiceTests()
@@ -35,12 +36,12 @@ public class OrdersServiceTests
             Price = 100
         };
 
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync(null as KnownUser);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => orderService.CreateOrderAsync(newOrderRequest));
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => orderService.CreateOrderAsync(newOrderRequest, _cancellationToken));
         Assert.Contains($"Known user with ID {newOrderRequest.UserId} not found.", ex.Message);
     }
 
@@ -70,20 +71,20 @@ public class OrdersServiceTests
             Price = newOrderRequest.Price
         };
 
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(),_cancellationToken))
             .ReturnsAsync(knownUser);
 
-        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>()))
+        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>(), _cancellationToken))
             .ReturnsAsync(createdOrder);
 
         _kfkaProducer
-           .Setup(p => p.ProduceAsync(orderId, It.IsAny<OrderCreatedEvent>()))
+           .Setup(p => p.ProduceAsync(orderId, It.IsAny<OrderCreatedEvent>(), _cancellationToken))
            .Returns(Task.CompletedTask);
 
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await orderService.CreateOrderAsync(newOrderRequest);
+        var result = await orderService.CreateOrderAsync(newOrderRequest, _cancellationToken);
 
         // Assert   
         Assert.NotNull(result);
@@ -94,7 +95,7 @@ public class OrdersServiceTests
             e.Product == createdOrder.Product &&
             e.Price == createdOrder.Price &&
             e.Quantity == createdOrder.Quantity
-        )), Times.Once);
+        ), _cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -110,15 +111,15 @@ public class OrdersServiceTests
         };
         var knownUser = new KnownUser { UserId = newOrderRequest.UserId };
 
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync(knownUser);
-        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>()))
+        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>(), _cancellationToken))
             .ThrowsAsync(new Exception("Database error"));
 
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateOrderAsync(newOrderRequest));
+        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateOrderAsync(newOrderRequest, _cancellationToken));
         Assert.Equal("Database error", ex.Message);
     }
 
@@ -143,17 +144,17 @@ public class OrdersServiceTests
             Price = newOrderRequest.Price
         };
 
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync(knownUser);
-        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>()))
+        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>(), _cancellationToken))
             .ReturnsAsync(createdOrder);
-        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>()))
+        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>(), _cancellationToken))
             .ThrowsAsync(new Exception("Kafka error"));
 
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateOrderAsync(newOrderRequest));
+        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateOrderAsync(newOrderRequest, _cancellationToken));
         Assert.Equal("Kafka error", ex.Message);
     }
 
@@ -178,17 +179,17 @@ public class OrdersServiceTests
             Price = newOrderRequest.Price
         };
 
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync(knownUser);
-        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>()))
+        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>(), _cancellationToken))
             .ReturnsAsync(createdOrder);
-        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>()))
+        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>(), _cancellationToken))
             .Returns(Task.CompletedTask);
 
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await orderService.CreateOrderAsync(newOrderRequest);
+        var result = await orderService.CreateOrderAsync(newOrderRequest, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -219,17 +220,17 @@ public class OrdersServiceTests
             Price = newOrderRequest.Price
         };
 
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync(knownUser);
-        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>()))
+        _orderRepository.Setup(repo => repo.CreateOrderAsync(It.IsAny<Order>(), _cancellationToken))
             .ReturnsAsync(createdOrder);
-        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>()))
+        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<OrderCreatedEvent>(), _cancellationToken))
             .Returns(Task.CompletedTask);
 
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await orderService.CreateOrderAsync(newOrderRequest);
+        var result = await orderService.CreateOrderAsync(newOrderRequest, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -241,7 +242,7 @@ public class OrdersServiceTests
     {
         // Arrange
         var orderId = Guid.NewGuid();
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync(new Order
             {
                 UserId = new Guid(),
@@ -254,7 +255,7 @@ public class OrdersServiceTests
         var ordersService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await ordersService.GetOrderByIdAsync(orderId);
+        var result = await ordersService.GetOrderByIdAsync(orderId, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -266,12 +267,12 @@ public class OrdersServiceTests
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync((Order?)null);
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ReturnsAsync((Order?)null);
         var ordersService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => ordersService.GetOrderByIdAsync(orderId)
+            () => ordersService.GetOrderByIdAsync(orderId, _cancellationToken)
         );
     }
 
@@ -280,18 +281,18 @@ public class OrdersServiceTests
     {
         // Arrange
         Guid orderId = Guid.NewGuid();
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ThrowsAsync(new Exception("Database error"));
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ThrowsAsync(new Exception("Database error"));
 
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(
-            () => orderService.GetOrderByIdAsync(orderId)
+            () => orderService.GetOrderByIdAsync(orderId, _cancellationToken)
         );
 
         Assert.Equal("Database error", ex.Message);
-        _orderRepository.Verify(r => r.GetOrderByIdAsync(It.IsAny<Guid>()), Times.Once);
+        _orderRepository.Verify(r => r.GetOrderByIdAsync(It.IsAny<Guid>(), _cancellationToken), Times.Once);
 
     }
 
@@ -300,12 +301,12 @@ public class OrdersServiceTests
     {
         // Arrange
         var orderId = Guid.Empty;
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync((Order?)null);
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ReturnsAsync((Order?)null);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(() => orderService.GetOrderByIdAsync(orderId));
-        _orderRepository.Verify(r => r.GetOrderByIdAsync(orderId), Times.Once);
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => orderService.GetOrderByIdAsync(orderId, _cancellationToken));
+        _orderRepository.Verify(r => r.GetOrderByIdAsync(orderId, _cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -323,11 +324,11 @@ public class OrdersServiceTests
             Price = 99.99m
         };
 
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ReturnsAsync(expectedOrder);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await orderService.GetOrderByIdAsync(orderId);
+        var result = await orderService.GetOrderByIdAsync(orderId, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -352,11 +353,11 @@ public class OrdersServiceTests
             Price = 0.01m
         };
 
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ReturnsAsync(expectedOrder);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await orderService.GetOrderByIdAsync(orderId);
+        var result = await orderService.GetOrderByIdAsync(orderId, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -380,11 +381,11 @@ public class OrdersServiceTests
             Price = decimal.MaxValue
         };
 
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ReturnsAsync(expectedOrder);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await orderService.GetOrderByIdAsync(orderId);
+        var result = await orderService.GetOrderByIdAsync(orderId, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -400,14 +401,14 @@ public class OrdersServiceTests
         // Arrange
         var orderId = Guid.NewGuid();
         var expectedOrder = new Order { Id = orderId, UserId = Guid.NewGuid(), Product = "Test", Quantity = 1, Price = 10 };
-        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
+        _orderRepository.Setup(repo => repo.GetOrderByIdAsync(orderId, _cancellationToken)).ReturnsAsync(expectedOrder);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        await orderService.GetOrderByIdAsync(orderId);
+        await orderService.GetOrderByIdAsync(orderId, _cancellationToken);
 
         // Assert
-        _orderRepository.Verify(r => r.GetOrderByIdAsync(orderId), Times.Once);
+        _orderRepository.Verify(r => r.GetOrderByIdAsync(orderId, _cancellationToken), Times.Once);
         _orderRepository.VerifyNoOtherCalls();
     }
 
@@ -420,14 +421,14 @@ public class OrdersServiceTests
         var existingUser = new KnownUser { UserId = userId };
 
         _orderRepository
-            .Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId))
+            .Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId, _cancellationToken))
             .ReturnsAsync(existingUser);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
         // Act
-        await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser, _cancellationToken);
 
         // Assert
-        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(It.IsAny<KnownUser>()), Times.Never);
+        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(It.IsAny<KnownUser>(), _cancellationToken), Times.Never);
     }
 
     [Fact]
@@ -439,19 +440,19 @@ public class OrdersServiceTests
         var createdUser = new KnownUser { UserId = userId };
 
         _orderRepository
-            .Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId))
+            .Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId, _cancellationToken))
             .ReturnsAsync(null as KnownUser);
 
         _orderRepository
-            .Setup(repo => repo.CreateKnownUserAsync(knownUser))
+            .Setup(repo => repo.CreateKnownUserAsync(knownUser, _cancellationToken))
             .ReturnsAsync(1);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser, _cancellationToken);
 
         // Assert
-        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser), Times.Once);
+        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser, _cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -459,15 +460,15 @@ public class OrdersServiceTests
     {
         // Arrange
         var knownUser = new KnownUser { UserId = Guid.Empty };
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(Guid.Empty)).ReturnsAsync((KnownUser?)null);
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(Guid.Empty, _cancellationToken)).ReturnsAsync((KnownUser?)null);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser, _cancellationToken);
 
         // Assert
-        _orderRepository.Verify(repo => repo.GetKnownUserByIdAsync(Guid.Empty), Times.Once);
-        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser), Times.Once);
+        _orderRepository.Verify(repo => repo.GetKnownUserByIdAsync(Guid.Empty, _cancellationToken), Times.Once);
+        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser, _cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -475,12 +476,12 @@ public class OrdersServiceTests
     {
         // Arrange
         var knownUser = new KnownUser { UserId = Guid.NewGuid() };
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ThrowsAsync(new Exception("Database error"));
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateKnownUserAsync(knownUser));
+        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateKnownUserAsync(knownUser, _cancellationToken));
         Assert.Equal("Database error", ex.Message);
     }
 
@@ -489,14 +490,14 @@ public class OrdersServiceTests
     {
         // Arrange
         var knownUser = new KnownUser { UserId = Guid.NewGuid() };
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>()))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(It.IsAny<Guid>(), _cancellationToken))
             .ReturnsAsync((KnownUser?)null);
-        _orderRepository.Setup(repo => repo.CreateKnownUserAsync(It.IsAny<KnownUser>()))
+        _orderRepository.Setup(repo => repo.CreateKnownUserAsync(It.IsAny<KnownUser>(), _cancellationToken))
             .ThrowsAsync(new Exception("Create failed"));
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateKnownUserAsync(knownUser));
+        var ex = await Assert.ThrowsAsync<Exception>(() => orderService.CreateKnownUserAsync(knownUser, _cancellationToken));
         Assert.Equal("Create failed", ex.Message);
     }
 
@@ -509,18 +510,18 @@ public class OrdersServiceTests
             UserId = Guid.NewGuid(),
             Email = "test@example.com"
         };
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId, _cancellationToken))
             .ReturnsAsync((KnownUser?)null);
-        _orderRepository.Setup(repo => repo.CreateKnownUserAsync(knownUser))
+        _orderRepository.Setup(repo => repo.CreateKnownUserAsync(knownUser, _cancellationToken))
             .ReturnsAsync(1);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser, _cancellationToken);
 
         // Assert
         _orderRepository.Verify(repo => repo.CreateKnownUserAsync(It.Is<KnownUser>(u =>
-            u.UserId == knownUser.UserId && u.Email == knownUser.Email)), Times.Once);
+            u.UserId == knownUser.UserId && u.Email == knownUser.Email), _cancellationToken), Times.Once);
     }
 
     [Fact]
@@ -528,17 +529,17 @@ public class OrdersServiceTests
     {
         // Arrange
         var knownUser = new KnownUser { UserId = Guid.NewGuid() };
-        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId))
+        _orderRepository.Setup(repo => repo.GetKnownUserByIdAsync(knownUser.UserId, _cancellationToken))
             .ReturnsAsync((KnownUser?)null);
-        _orderRepository.Setup(repo => repo.CreateKnownUserAsync(knownUser))
+        _orderRepository.Setup(repo => repo.CreateKnownUserAsync(knownUser, _cancellationToken))
             .ReturnsAsync(1);
         var orderService = new OrdersService(_orderRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        await orderService.CreateKnownUserAsync(knownUser);
+        await orderService.CreateKnownUserAsync(knownUser, _cancellationToken);
 
         // Assert
-        _orderRepository.Verify(repo => repo.GetKnownUserByIdAsync(knownUser.UserId), Times.Once);
-        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser), Times.Once);
+        _orderRepository.Verify(repo => repo.GetKnownUserByIdAsync(knownUser.UserId, _cancellationToken), Times.Once);
+        _orderRepository.Verify(repo => repo.CreateKnownUserAsync(knownUser, _cancellationToken), Times.Once);
     }
 }

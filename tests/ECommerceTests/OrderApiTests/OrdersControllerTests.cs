@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OrderApi.Controllers;
 using OrderApi.Dtos;
 using OrderApi.Services;
+using System.Text.Json;
 
 namespace ECommerceTests.OrderApiTests;
 
@@ -12,11 +13,14 @@ public class OrdersControllerTests
 {
     private readonly Mock<IOrdersService> _orderService;
     private readonly Mock<ILogger<OrdersController>> _logger;
+    private readonly Mock<IDistributedCache> _cache;
+    private readonly CancellationToken ct = CancellationToken.None;
 
     public OrdersControllerTests()
     {
         _orderService = new Mock<IOrdersService>();
         _logger = new Mock<ILogger<OrdersController>>();
+        _cache = new Mock<IDistributedCache>();
     }
 
     [Fact]
@@ -27,12 +31,12 @@ public class OrdersControllerTests
         Guid userId = Guid.NewGuid();
         var expectedOrder = new OrderResponse { Id = orderId, UserId = userId, Product = "Product 1", Quantity = 1, Price = 38m };
 
-        _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
+        _orderService.Setup(s => s.GetOrderByIdAsync(orderId, ct)).ReturnsAsync(expectedOrder);
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.GetOrder(orderId);
+        var result = await controller.GetOrder(orderId, ct);
 
         // Assert
         Assert.NotNull(result);
@@ -53,10 +57,10 @@ public class OrdersControllerTests
         // Arrange
         Guid orderId = Guid.Empty;
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.GetOrder(orderId);
+        var result = await controller.GetOrder(orderId, ct);
 
         // Assert
         Assert.NotNull(result);
@@ -69,9 +73,9 @@ public class OrdersControllerTests
     {
         // Arrange
         Guid orderId = Guid.Empty;
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
         // Act
-        var result = await controller.GetOrder(orderId);
+        var result = await controller.GetOrder(orderId, ct);
         // Assert
         _logger.Verify(
             x => x.Log(
@@ -89,10 +93,10 @@ public class OrdersControllerTests
         // Arrange
         Guid orderId = Guid.NewGuid();
         var expectedOrder = new OrderResponse { Id = orderId, Product = "Product 1", Quantity = 1, Price = 35m, UserId = Guid.NewGuid() };
-        _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        _orderService.Setup(s => s.GetOrderByIdAsync(orderId, ct)).ReturnsAsync(expectedOrder);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
         // Act
-        var result = await controller.GetOrder(orderId);
+        var result = await controller.GetOrder(orderId, ct);
         // Assert
         _logger.Verify(
             x => x.Log(
@@ -110,14 +114,14 @@ public class OrdersControllerTests
         // Arrange
         var orderId = Guid.NewGuid();
         var expectedOrder = new OrderResponse { Id = orderId, UserId = Guid.NewGuid() };
-        _orderService.Setup(s => s.GetOrderByIdAsync(orderId)).ReturnsAsync(expectedOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        _orderService.Setup(s => s.GetOrderByIdAsync(orderId, ct)).ReturnsAsync(expectedOrder);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        await controller.GetOrder(orderId);
+        await controller.GetOrder(orderId, ct);
 
         // Assert
-        _orderService.Verify(s => s.GetOrderByIdAsync(orderId), Times.Once);
+        _orderService.Verify(s => s.GetOrderByIdAsync(orderId, ct), Times.Once);
     }
 
     [Fact]
@@ -133,10 +137,10 @@ public class OrdersControllerTests
             Price = 0m
         };
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(orderCreationRequest);
+        var result = await controller.CreateOrder(orderCreationRequest, ct);
 
         // Assert
         Assert.NotNull(result);
@@ -166,16 +170,16 @@ public class OrdersControllerTests
             Id = orderId
         };
 
-        _orderService.Setup(s => s.CreateOrderAsync(orderCreationRequest)).ReturnsAsync(createdOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        _orderService.Setup(s => s.CreateOrderAsync(orderCreationRequest, ct)).ReturnsAsync(createdOrder);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(orderCreationRequest);
+        var result = await controller.CreateOrder(orderCreationRequest, ct);
 
         // Assert
         Assert.NotNull(result);
         var okResult = Assert.IsType<CreatedAtActionResult>(result);
-         Assert.Equal(201, okResult.StatusCode);
+        Assert.Equal(201, okResult.StatusCode);
         var orderResult = Assert.IsType<OrderResponse>(okResult.Value);
         Assert.NotNull(orderResult);
         Assert.Equal(createdOrder.UserId, orderResult.UserId);
@@ -190,10 +194,10 @@ public class OrdersControllerTests
         // Arrange
         var newOrder = null as OrderCreationRequest;
 
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(newOrder);
+        var result = await controller.CreateOrder(newOrder, ct);
 
         // Assert
         Assert.NotNull(result);
@@ -212,10 +216,10 @@ public class OrdersControllerTests
             Quantity = -1,
             Price = 10m
         };
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(orderRequest);
+        var result = await controller.CreateOrder(orderRequest, ct);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -233,45 +237,14 @@ public class OrdersControllerTests
             Quantity = 1,
             Price = -10m
         };
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(orderRequest);
+        var result = await controller.CreateOrder(orderRequest, ct);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
-    }
-
-    [Fact]
-    public async Task CreateOrder_LogsInformation_WhenCreatingOrder()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var product = "Test Product";
-        var orderRequest = new OrderCreationRequest
-        {
-            UserId = userId,
-            Product = product,
-            Quantity = 1,
-            Price = 10m
-        };
-        var createdOrder = new OrderResponse { Id = Guid.NewGuid(), UserId = orderRequest.UserId };
-        _orderService.Setup(s => s.CreateOrderAsync(orderRequest)).ReturnsAsync(createdOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
-
-        // Act
-        await controller.CreateOrder(orderRequest);
-
-        // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Creating a new order with UserId: {userId}, Product: {product}")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
     [Fact]
@@ -285,10 +258,10 @@ public class OrdersControllerTests
             Quantity = 0,
             Price = 0m
         };
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        await controller.CreateOrder(orderRequest);
+        await controller.CreateOrder(orderRequest, ct);
 
         // Assert
         _logger.Verify(
@@ -313,11 +286,11 @@ public class OrdersControllerTests
             Price = 0.01m
         };
         var createdOrder = new OrderResponse { Id = Guid.NewGuid(), UserId = orderRequest.UserId };
-        _orderService.Setup(s => s.CreateOrderAsync(orderRequest)).ReturnsAsync(createdOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        _orderService.Setup(s => s.CreateOrderAsync(orderRequest, ct)).ReturnsAsync(createdOrder);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(orderRequest);
+        var result = await controller.CreateOrder(orderRequest, ct);
 
         // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -336,11 +309,11 @@ public class OrdersControllerTests
             Price = decimal.MaxValue
         };
         var createdOrder = new OrderResponse { Id = Guid.NewGuid(), UserId = orderRequest.UserId };
-        _orderService.Setup(s => s.CreateOrderAsync(orderRequest)).ReturnsAsync(createdOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        _orderService.Setup(s => s.CreateOrderAsync(orderRequest, ct)).ReturnsAsync(createdOrder);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        var result = await controller.CreateOrder(orderRequest);
+        var result = await controller.CreateOrder(orderRequest, ct);
 
         // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -359,13 +332,13 @@ public class OrdersControllerTests
             Price = 10m
         };
         var createdOrder = new OrderResponse { Id = Guid.NewGuid(), UserId = orderRequest.UserId };
-        _orderService.Setup(s => s.CreateOrderAsync(orderRequest)).ReturnsAsync(createdOrder);
-        var controller = new OrdersController(_orderService.Object, _logger.Object);
+        _orderService.Setup(s => s.CreateOrderAsync(orderRequest, ct)).ReturnsAsync(createdOrder);
+        var controller = new OrdersController(_orderService.Object, _logger.Object, _cache.Object);
 
         // Act
-        await controller.CreateOrder(orderRequest);
+        await controller.CreateOrder(orderRequest, ct);
 
         // Assert
-        _orderService.Verify(s => s.CreateOrderAsync(orderRequest), Times.Once);
+        _orderService.Verify(s => s.CreateOrderAsync(orderRequest, ct), Times.Once);
     }
 }

@@ -3,41 +3,34 @@ using Shared.Models;
 
 namespace OrderApi.Data;
 
-public class OrderRepository : IOrderRepository
+public class OrderRepository(OrderDbContext context) : IOrderRepository
 {
-    private readonly OrderDbContext _context;
-
-    public OrderRepository(OrderDbContext context)
+    public async Task<int> CreateKnownUserAsync(KnownUser knownUser, CancellationToken cts)
     {
-        _context = context;
+        await context.KnownUsers.AddAsync(knownUser);
+        return await context.SaveChangesAsync();
     }
 
-    public async Task<int> CreateKnownUserAsync(KnownUser knownUser)
+    public async Task<Order?> CreateOrderAsync(Order newOrder, CancellationToken cts)
     {
-        await _context.KnownUsers.AddAsync(knownUser);
-        return await _context.SaveChangesAsync();
-    }
-
-    public async Task<Order?> CreateOrderAsync(Order newOrder)
-    {
-        await _context.Orders.AddAsync(newOrder);
-        await _context.SaveChangesAsync();
+        await context.Orders.AddAsync(newOrder);
+        await context.SaveChangesAsync();
         return newOrder;
     }
 
-    public async Task<KnownUser?> GetKnownUserByIdAsync(Guid id)
+    public async Task<KnownUser?> GetKnownUserByIdAsync(Guid id, CancellationToken cts)
     {
-        return await _context.KnownUsers.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == id);
+        return await context.KnownUsers.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == id);
     }
 
-    public async Task<Order?> GetOrderByIdAsync(Guid id)
+    public async Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken cts)
     {
-        return await _context.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        return await context.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public Task<List<Order>> GetOrdersByUserAsync(Guid userId)
+    public Task<List<Order>> GetOrdersByUserAsync(Guid userId, CancellationToken cts)
     {
-        return _context.Orders.AsNoTracking()
+        return context.Orders.AsNoTracking()
              .Where(o => o.UserId == userId)
              .Select(o => new Order
              {

@@ -14,6 +14,7 @@ public class UsersServiceTests
     private readonly Mock<IUserRepository> _userRepository;
     private readonly Mock<IKafkaProducerWrapper> _kfkaProducer;
     private readonly Mock<ILogger<UsersService>> _logger;
+    private readonly CancellationToken _cts = new CancellationToken();
 
     public UsersServiceTests()
     {
@@ -27,7 +28,7 @@ public class UsersServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        _userRepository.Setup(repo => repo.GetUserByIdAsync(It.IsAny<Guid>()))
+        _userRepository.Setup(repo => repo.GetUserByIdAsync(It.IsAny<Guid>(), _cts))
             .ReturnsAsync(new User
             {
                 Id = userId,
@@ -39,7 +40,7 @@ public class UsersServiceTests
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await usersService.GetUserByIdAsync(userId);
+        var result = await usersService.GetUserByIdAsync(userId, _cts);
 
         // Assert
         Assert.NotNull(result);
@@ -51,12 +52,12 @@ public class UsersServiceTests
     {
         // Arrange
         Guid userId = Guid.NewGuid();
-        _userRepository.Setup(repo => repo.GetUserByIdAsync(userId)).ReturnsAsync((User?)null);
+        _userRepository.Setup(repo => repo.GetUserByIdAsync(userId, _cts)).ReturnsAsync((User?)null);
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => usersService.GetUserByIdAsync(userId)
+            () => usersService.GetUserByIdAsync(userId, _cts)
         );
     }
 
@@ -65,18 +66,18 @@ public class UsersServiceTests
     {
         // Arrange
         Guid userId = Guid.NewGuid();
-        _userRepository.Setup(repo => repo.GetUserByIdAsync(userId)).ThrowsAsync(new Exception("Database error"));
+        _userRepository.Setup(repo => repo.GetUserByIdAsync(userId, _cts)).ThrowsAsync(new Exception("Database error"));
 
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(
-            () => usersService.GetUserByIdAsync(userId)
+            () => usersService.GetUserByIdAsync(userId, _cts)
         );
 
         Assert.Equal("Database error", ex.Message);
-        _userRepository.Verify(r => r.GetUserByIdAsync(It.IsAny<Guid>()), Times.Once);
+        _userRepository.Verify(r => r.GetUserByIdAsync(It.IsAny<Guid>(), _cts), Times.Once);
 
     }
 
@@ -97,22 +98,22 @@ public class UsersServiceTests
             Email = newUserRequest.Email
         };
 
-        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email, _cts))
             .ReturnsAsync((User?)null);
-        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
+        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>(), _cts))
             .ReturnsAsync(createdUser);
 
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act
-        var result = await usersService.CreateUserAsync(newUserRequest);
+        var result = await usersService.CreateUserAsync(newUserRequest, _cts);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(createdUser.Id, result.Id);
         Assert.Equal(createdUser.Name, result.Name);
         Assert.Equal(createdUser.Email, result.Email);
-        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Once);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>(), _cts), Times.Once);
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public class UsersServiceTests
             Email = "sajith@mail.com"
         };
 
-        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email, _cts))
             .ReturnsAsync(new User
             {
                 Id = Guid.NewGuid(),
@@ -137,12 +138,12 @@ public class UsersServiceTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ResourceConflictException>(
-           () => usersService.CreateUserAsync(newUserRequest)
+           () => usersService.CreateUserAsync(newUserRequest, _cts)
        );
 
         Assert.Contains("already exists", ex.Message);
-        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>()), Times.Never);
-        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Never);
+        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>(), _cts), Times.Never);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>(), _cts), Times.Never);
     }
 
     [Fact]
@@ -155,20 +156,20 @@ public class UsersServiceTests
             Email = "sajith@mail.com"
         };
 
-        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email, _cts))
             .ReturnsAsync((User?)null);
-        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
+        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>(), _cts))
             .ReturnsAsync((User?)null);
 
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(
-            () => usersService.CreateUserAsync(newUserRequest)
+            () => usersService.CreateUserAsync(newUserRequest, _cts)
         );
 
         Assert.Equal("Failed to create user.", ex.Message);
-        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Never);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>(), _cts), Times.Never);
     }
 
     [Fact]
@@ -181,19 +182,19 @@ public class UsersServiceTests
             Email = "sajith@mail.com"
         };
 
-        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email, _cts))
             .ThrowsAsync(new Exception("Database connection failed"));
 
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(
-            () => usersService.CreateUserAsync(newUserRequest)
+            () => usersService.CreateUserAsync(newUserRequest, _cts)
         );
 
         Assert.Equal("Database connection failed", ex.Message);
-        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>()), Times.Never);
-        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()), Times.Never);
+        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>(), _cts), Times.Never);
+        _kfkaProducer.Verify(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>(), _cts), Times.Never);
     }
 
     [Fact]
@@ -213,21 +214,21 @@ public class UsersServiceTests
             Email = newUserRequest.Email
         };
 
-        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email))
+        _userRepository.Setup(repo => repo.GetUserByEmailAsync(newUserRequest.Email, _cts))
             .ReturnsAsync((User?)null);
-        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>()))
+        _userRepository.Setup(repo => repo.CreateUserAsync(It.IsAny<User>(), _cts))
             .ReturnsAsync(createdUser);
-        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>()))
+        _kfkaProducer.Setup(p => p.ProduceAsync(It.IsAny<Guid>(), It.IsAny<UserCreatedEvent>(), _cts))
             .ThrowsAsync(new Exception("Kafka connection failed"));
 
         var usersService = new UsersService(_userRepository.Object, _logger.Object, _kfkaProducer.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<Exception>(
-            () => usersService.CreateUserAsync(newUserRequest)
+            () => usersService.CreateUserAsync(newUserRequest, _cts)
         );
 
         Assert.Equal("Kafka connection failed", ex.Message);
-        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>()), Times.Once);
+        _userRepository.Verify(r => r.CreateUserAsync(It.IsAny<User>(), _cts), Times.Once);
     }
 }

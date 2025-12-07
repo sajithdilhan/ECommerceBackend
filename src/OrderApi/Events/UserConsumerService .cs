@@ -1,23 +1,16 @@
 ﻿using OrderApi.Services;
+using Shared.Common;
 using Shared.Contracts;
 
 namespace OrderApi.Events;
 
-public class UserConsumerService : KafkaConsumerBase<UserCreatedEvent>
+public class UserConsumerService(
+    ILogger<UserConsumerService> logger, 
+    IConfiguration config, 
+    IServiceProvider serviceProvider) : KafkaConsumerBase<UserCreatedEvent>(logger: logger, config: config)
 {
-    private readonly ILogger<UserConsumerService> _logger;
-    private readonly IConfiguration _config;
-    private readonly IServiceProvider _serviceProvider;
 
-    public UserConsumerService(ILogger<UserConsumerService> logger, IConfiguration config, IServiceProvider serviceProvider)
-        : base(logger, config)
-    {
-        _logger = logger;
-        _config = config;
-        _serviceProvider = serviceProvider;
-    }
-
-    public override string Topic => _config["Kafka:ConsumerTopic"] ?? string.Empty;
+    public override string Topic => config[Constants.KafkaConsumerTopicConfigKey] ?? throw new ArgumentNullException("Kafka topic missing in config");
 
     public override async Task HandleMessageAsync(UserCreatedEvent? eventMessage)
     {
@@ -25,16 +18,17 @@ public class UserConsumerService : KafkaConsumerBase<UserCreatedEvent>
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = serviceProvider.CreateScope();
             var ordersService = scope.ServiceProvider.GetRequiredService<IOrdersService>();
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token;
             await ordersService.CreateKnownUserAsync(
-                new Shared.Models.KnownUser() { UserId = eventMessage.UserId, Email = eventMessage.Email });
+                new Shared.Models.KnownUser() { UserId = eventMessage.UserId, Email = eventMessage.Email }, cts);
 
-            _logger.LogInformation("Processed UserCreated: {UserId}, {Name}", eventMessage.UserId, eventMessage.Name);
+            logger.LogInformation("Processed UserCreated: {UserId}, {Name}", eventMessage.UserId, eventMessage.Name);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing UserCreatedEvent for UserId: {UserId}", eventMessage.UserId);
+            logger.LogError(ex, "Error processing UserCreatedEvent for UserId: {UserId}", eventMessage.UserId);
             // implement retry logic here
         }
     }

@@ -18,7 +18,7 @@ public class UsersController(IUsersService usersService, ILogger<UsersController
     [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<UserResponse>> GetUser(Guid id)
+    public async Task<ActionResult<UserResponse>> GetUser(Guid id, CancellationToken cts)
     {
         if (id == Guid.Empty)
         {
@@ -28,13 +28,14 @@ public class UsersController(IUsersService usersService, ILogger<UsersController
 
         logger.LogInformation("Retrieving user with ID: {UserId}", id);
 
-        var cached = await cache.GetStringAsync($"{Constants.CacheKeyUserPrefix}{id}");
-        if (cached != null)
+        var cached = await cache.GetStringAsync($"{Constants.CacheKeyUserPrefix}{id}", cts);
+        if (!string.IsNullOrWhiteSpace(cached))
         {
+            logger.LogInformation("User with ID: {UserId} found in cache.", id);
             return Ok(JsonSerializer.Deserialize<UserResponse>(cached));
         }
 
-        var user = await usersService.GetUserByIdAsync(id);
+        var user = await usersService.GetUserByIdAsync(id, cts);
 
         await cache.SetStringAsync(
             $"{Constants.CacheKeyUserPrefix}{id}",
@@ -53,7 +54,7 @@ public class UsersController(IUsersService usersService, ILogger<UsersController
     [ProducesResponseType(401)]
     [ProducesResponseType(409)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult> CreateUser(UserCreationRequest newUser)
+    public async Task<ActionResult> CreateUser(UserCreationRequest? newUser, CancellationToken cts)
     {
         if (IsInValidRequest(newUser))
         {
@@ -62,7 +63,7 @@ public class UsersController(IUsersService usersService, ILogger<UsersController
         }
 
         logger.LogInformation("Creating a new user {@user}", JsonSerializer.Serialize(newUser));
-        var createdUser = await usersService.CreateUserAsync(newUser);
+        var createdUser = await usersService.CreateUserAsync(newUser!, cts);
 
         await cache.SetStringAsync(
             $"{Constants.CacheKeyUserPrefix}{createdUser.Id}",
@@ -70,15 +71,15 @@ public class UsersController(IUsersService usersService, ILogger<UsersController
             new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            });
+            }, cts);
 
         return CreatedAtAction(nameof(GetUser), new { id = createdUser.Id }, createdUser);
     }
 
-    private static bool IsInValidRequest(UserCreationRequest newUser)
+    private static bool IsInValidRequest(UserCreationRequest? newUser)
     {
-        return newUser is null 
-            || string.IsNullOrWhiteSpace(newUser?.Name) 
+        return newUser is null
+            || string.IsNullOrWhiteSpace(newUser?.Name)
             || string.IsNullOrWhiteSpace(newUser?.Email)
             || !IsValidEmailFormat(newUser?.Email);
     }
@@ -87,7 +88,7 @@ public class UsersController(IUsersService usersService, ILogger<UsersController
     {
         try
         {
-            if(string.IsNullOrWhiteSpace(email)) 
+            if (string.IsNullOrWhiteSpace(email))
                 return false;
 
             var addr = new MailAddress(email);

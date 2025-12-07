@@ -5,8 +5,8 @@ namespace OrderApi.Services;
 
 public interface IOrdersService
 {
-    public Task<OrderResponse> CreateOrderAsync(OrderCreationRequest newOrder);
-    public Task<OrderResponse> GetOrderByIdAsync(Guid id);
-    public Task<List<OrderResponse>> GetOrdersByUserAsync(Guid userId);
-    public Task CreateKnownUserAsync(KnownUser knownUser);
+    public Task<OrderResponse> CreateOrderAsync(OrderCreationRequest newOrder, CancellationToken cts);
+    public Task<OrderResponse> GetOrderByIdAsync(Guid id, CancellationToken cts);
+    public Task<List<OrderResponse>> GetOrdersByUserAsync(Guid userId, CancellationToken cts);
+    public Task CreateKnownUserAsync(KnownUser knownUser, CancellationToken cts);
 }

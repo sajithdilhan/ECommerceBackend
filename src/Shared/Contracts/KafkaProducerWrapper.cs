@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Shared.Common;
 using System.Text.Json;
 
 namespace Shared.Contracts;
@@ -14,18 +15,20 @@ public class KafkaProducerWrapper : IKafkaProducerWrapper
 
     public KafkaProducerWrapper(IConfiguration configuration, ILogger<KafkaProducerWrapper> logger)
     {
+        ArgumentNullException.ThrowIfNull(configuration[Constants.KafkaProducerTopicConfigKey], nameof(Constants.KafkaBootstrapServersConfigKey));
+
         _logger = logger;
         _config = configuration;
-        _producerTopic = configuration["Kafka:ProducerTopic"] ?? string.Empty;
+        _producerTopic = configuration[Constants.KafkaProducerTopicConfigKey] ?? string.Empty;
         var config = new ProducerConfig
         {
-            BootstrapServers = _config["Kafka:BootstrapServers"]
+            BootstrapServers = _config[Constants.KafkaBootstrapServersConfigKey]
         };
 
         _producer = new ProducerBuilder<string, string>(config).Build();
     }
 
-    public async Task ProduceAsync<T>(Guid key, T eventObject) where T : class
+    public async Task ProduceAsync<T>(Guid key, T eventObject, CancellationToken cts) where T : class
     {
         var message = new Message<string, string>
         {
@@ -35,7 +38,6 @@ public class KafkaProducerWrapper : IKafkaProducerWrapper
 
         _logger.LogInformation("Producing message to topic {Topic} with key {Key} and value {Value}",
                                 _producerTopic, message.Key, message.Value);
-        CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await _producer.ProduceAsync(_producerTopic, message, cancellationToken: cts.Token);
+        await _producer.ProduceAsync(_producerTopic, message, cancellationToken: cts);
     }
 }

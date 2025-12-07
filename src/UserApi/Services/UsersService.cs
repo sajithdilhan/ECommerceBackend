@@ -7,23 +7,23 @@ namespace UserApi.Services;
 
 public class UsersService(IUserRepository userRepository, ILogger<UsersService> logger, IKafkaProducerWrapper producer) : IUsersService
 {
-    public async Task<UserResponse> CreateUserAsync(UserCreationRequest newUser)
+    public async Task<UserResponse> CreateUserAsync(UserCreationRequest newUser, CancellationToken cts)
     {
         try
         {
             var user = newUser.MapToUser();
 
-            var exsistingUser = await userRepository.GetUserByEmailAsync(user.Email);
+            var exsistingUser = await userRepository.GetUserByEmailAsync(user.Email, cts);
             if (exsistingUser != null)
             {
                 logger.LogWarning("Conflict occurred while creating user with Email: {UserEmail}", newUser.Email);
                 throw new ResourceConflictException($"User with email {user.Email} already exists.");
             }
 
-            var createdUser = await userRepository.CreateUserAsync(user) ?? throw new Exception("Failed to create user.");
+            var createdUser = await userRepository.CreateUserAsync(user, cts) ?? throw new Exception("Failed to create user.");
 
             await producer.ProduceAsync(createdUser.Id,
-                new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name });
+                new UserCreatedEvent { UserId = createdUser.Id, Email = createdUser.Email, Name = createdUser.Name }, cts);
 
             return UserResponse.MapUserToResponseDto(createdUser);
         }
@@ -35,11 +35,11 @@ public class UsersService(IUserRepository userRepository, ILogger<UsersService> 
         
     }
 
-    public async Task<UserResponse> GetUserByIdAsync(Guid id)
+    public async Task<UserResponse> GetUserByIdAsync(Guid id, CancellationToken cts)
     {
         try
         {
-            var response = await userRepository.GetUserByIdAsync(id);
+            var response = await userRepository.GetUserByIdAsync(id, cts);
             return response == null ? throw new NotFoundException($"User with ID {id} not found.")
                                     : UserResponse.MapUserToResponseDto(response);
         }

@@ -1,39 +1,39 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
 using OrderApi.Dtos;
 using OrderApi.Services;
+using Shared.Common;
 using System.Text.Json;
 
 namespace OrderApi.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class OrdersController : ControllerBase
+public class OrdersController(IOrdersService ordersService, ILogger<OrdersController> logger, IDistributedCache cache) : ControllerBase
 {
-
-    private readonly IOrdersService _orderService;
-    private readonly ILogger<OrdersController> _logger;
-
-    public OrdersController(IOrdersService orderService, ILogger<OrdersController> logger)
-    {
-        _orderService = orderService;
-        _logger = logger;
-    }
-
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(OrderResponse), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<OrderResponse>> GetOrder(Guid id)
+    public async Task<ActionResult<OrderResponse>> GetOrder(Guid id, CancellationToken cts)
     {
         if (id == Guid.Empty)
         {
-            _logger.LogWarning("GetOrder called with an empty GUID.");
+            logger.LogWarning("GetOrder called with an empty GUID.");
             return BadRequest("Invalid order ID.");
         }
 
-        _logger.LogInformation("Retrieving order with ID: {OrderId}", id);
-        var order = await _orderService.GetOrderByIdAsync(id);
+        logger.LogInformation("Retrieving order with ID: {OrderId}", id);
+
+        var cached = await cache.GetStringAsync($"{Constants.CacheKeyOrderPrefix}{id}", cts);
+        if (!string.IsNullOrWhiteSpace(cached))
+        {
+            logger.LogInformation("Order with ID: {id} found in cache.", id);
+            return Ok(JsonSerializer.Deserialize<OrderResponse>(cached));
+        }
+
+        var order = await ordersService.GetOrderByIdAsync(id, cts);
 
         return Ok(order);
     }
@@ -43,16 +43,16 @@ public class OrdersController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<OrderResponse>> GetOrdersByUserId(Guid userId)
+    public async Task<ActionResult<OrderResponse>> GetOrdersByUserId(Guid userId, CancellationToken cts)
     {
         if (userId == Guid.Empty)
         {
-            _logger.LogWarning("GetOrder called with an empty UserId GUID.");
+            logger.LogWarning("GetOrder called with an empty UserId GUID.");
             return BadRequest("Invalid user ID.");
         }
 
-        _logger.LogInformation("Retrieving orders by user: {UserId}", userId);
-        var order = await _orderService.GetOrdersByUserAsync(userId);
+        logger.LogInformation("Retrieving orders by user: {UserId}", userId);
+        var order = await ordersService.GetOrdersByUserAsync(userId, cts);
 
         return Ok(order);
     }
@@ -61,16 +61,24 @@ public class OrdersController : ControllerBase
     [ProducesResponseType(typeof(OrderResponse), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult> CreateOrder(OrderCreationRequest? newOrder)
+    public async Task<ActionResult> CreateOrder(OrderCreationRequest? newOrder, CancellationToken cts)
     {
         if (IsInValidRequest(newOrder))
         {
-            _logger.LogWarning("CreateOrder called with invalid data.");
+            logger.LogWarning("CreateOrder called with invalid data.");
             return BadRequest("Invalid request data.");
         }
 
-        _logger.LogInformation("Creating a new order: {@NewOrder}", JsonSerializer.Serialize(newOrder));
-        var createdOrder = await _orderService.CreateOrderAsync(newOrder!);
+        logger.LogInformation("Creating a new order: {@NewOrder}", JsonSerializer.Serialize(newOrder));
+        var createdOrder = await ordersService.CreateOrderAsync(newOrder!, cts);
+
+        await cache.SetStringAsync(
+           $"{Constants.CacheKeyOrderPrefix}{createdOrder.Id}",
+           JsonSerializer.Serialize(createdOrder),
+           new DistributedCacheEntryOptions
+           {
+               AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+           }, cts);
 
         return CreatedAtAction(nameof(GetOrder), new { id = createdOrder.Id }, createdOrder);
     }

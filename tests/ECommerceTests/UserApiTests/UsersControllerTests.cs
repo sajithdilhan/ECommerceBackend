@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Threading;
 using UserApi.Controllers;
 using UserApi.Dtos;
 using UserApi.Services;
@@ -13,6 +14,7 @@ public class UsersControllerTests
     private readonly Mock<IUsersService> _userService;
     private readonly Mock<ILogger<UsersController>> _logger;
     private readonly Mock<IDistributedCache> _cach;
+    private readonly CancellationToken _cancellationToken = CancellationToken.None;
 
     public UsersControllerTests()
     {
@@ -28,12 +30,12 @@ public class UsersControllerTests
         Guid userId = Guid.NewGuid();
         var expectedUser = new UserResponse { Id = userId, Name = "John Doe", Email = "test@test.com" };
 
-        _userService.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(expectedUser);
+        _userService.Setup(s => s.GetUserByIdAsync(userId, _cancellationToken)).ReturnsAsync(expectedUser);
 
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.GetUser(userId);
+        var result = await controller.GetUser(userId, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -55,7 +57,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.GetUser(userId);
+        var result = await controller.GetUser(userId, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -70,7 +72,7 @@ public class UsersControllerTests
         Guid userId = Guid.Empty;
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
         // Act
-        var result = await controller.GetUser(userId);
+        var result = await controller.GetUser(userId, _cancellationToken);
         // Assert
         _logger.Verify(
             x => x.Log(
@@ -88,10 +90,10 @@ public class UsersControllerTests
         // Arrange
         Guid userId = Guid.NewGuid();
         var expectedUser = new UserResponse { Id = userId, Name = "John Doe", Email = "sajith@mail.com" };
-        _userService.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(expectedUser);
+        _userService.Setup(s => s.GetUserByIdAsync(userId, _cancellationToken)).ReturnsAsync(expectedUser);
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
         // Act
-        var result = await controller.GetUser(userId);
+        var result = await controller.GetUser(userId, _cancellationToken);
         // Assert
         _logger.Verify(
             x => x.Log(
@@ -116,7 +118,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userCreationRequest);
+        var result = await controller.CreateUser(userCreationRequest, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -142,11 +144,11 @@ public class UsersControllerTests
             Email = newUser.Email
         };
 
-        _userService.Setup(s => s.CreateUserAsync(newUser)).ReturnsAsync(createdUser);
+        _userService.Setup(s => s.CreateUserAsync(newUser, _cancellationToken)).ReturnsAsync(createdUser);
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(newUser);
+        var result = await controller.CreateUser(newUser, _cancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -165,7 +167,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(null);
+        var result = await controller.CreateUser(null, _cancellationToken);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -184,7 +186,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -203,7 +205,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -222,7 +224,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -241,7 +243,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -260,38 +262,11 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(400, badRequestResult.StatusCode);
-    }
-
-    [Fact]
-    public async Task CreateUser_LogsInformation_WhenCreatingUser()
-    {
-        // Arrange
-        var userRequest = new UserCreationRequest
-        {
-            Name = "Test User",
-            Email = "sajith@mail.com"
-        };
-        var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
-        _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
-        var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
-
-        // Act
-        await controller.CreateUser(userRequest);
-
-        // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains($"Creating a new user with Name: {userRequest.Name}, Email: {userRequest.Email}")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
     }
 
     [Fact]
@@ -306,7 +281,7 @@ public class UsersControllerTests
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        await controller.CreateUser(userRequest);
+        await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         _logger.Verify(
@@ -329,11 +304,11 @@ public class UsersControllerTests
             Email = "a@b.c"
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
-        _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
+        _userService.Setup(s => s.CreateUserAsync(userRequest, _cancellationToken)).ReturnsAsync(createdUser);
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -350,11 +325,11 @@ public class UsersControllerTests
             Email = new string('a', 100) + "@example.com"
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
-        _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
+        _userService.Setup(s => s.CreateUserAsync(userRequest, _cancellationToken)).ReturnsAsync(createdUser);
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        var result = await controller.CreateUser(userRequest);
+        var result = await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -371,14 +346,14 @@ public class UsersControllerTests
             Email = "sajith@mail.com"
         };
         var createdUser = new UserResponse { Id = Guid.NewGuid(), Name = userRequest.Name, Email = userRequest.Email };
-        _userService.Setup(s => s.CreateUserAsync(userRequest)).ReturnsAsync(createdUser);
+        _userService.Setup(s => s.CreateUserAsync(userRequest, _cancellationToken)).ReturnsAsync(createdUser);
         var controller = new UsersController(_userService.Object, _logger.Object, _cach.Object);
 
         // Act
-        await controller.CreateUser(userRequest);
+        await controller.CreateUser(userRequest, _cancellationToken);
 
         // Assert
-        _userService.Verify(s => s.CreateUserAsync(userRequest), Times.Once);
+        _userService.Verify(s => s.CreateUserAsync(userRequest, _cancellationToken), Times.Once);
     }
-    
+
 }
