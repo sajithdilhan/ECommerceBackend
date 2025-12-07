@@ -1,9 +1,9 @@
-﻿using System.Net;
-using System.Text.Json;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Shared.Exceptions;
+using Shared.Models;
+using System.Net;
+using System.Text.Json;
 
 namespace Shared.Middlewares;
 
@@ -53,14 +53,15 @@ public class ExceptionMiddleware
             _ => "An unexpected error occurred. Please try again later."
         };
 
-        var problem = new ProblemDetails
+        var problem = new ApiProblemDetails
         {
             Title = message,
             Status = (int)statusCode,
-            Detail = ex.Message
+            Detail = ex.Message,
+            Instance = context.Request.Path
         };
 
-        context.Response.StatusCode = problem.Status.Value;
+        context.Response.StatusCode = problem.Status;
         context.Response.ContentType = "application/problem+json";
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
